@@ -1,0 +1,52 @@
+// The client's resources.
+//
+// The strings are in Strings.rc, included below rather than written here, so
+// that "what does this program say" stays one file.
+
+#include <windows.h>
+
+#include "resource.h"
+#include "version.h"
+
+// The custom icon is off until there is one worth shipping: with no ICON
+// resource the exe shows Windows' stock application icon everywhere, which is
+// honest about the state of the art. Put this line back to turn it on:
+// IDI_APP ICON "app.ico"
+
+// Embedded as resource 1 rather than left to the linker: it is the only way
+// MinGW can do it, and MSVC is told not to generate a second (see
+// /MANIFEST:NO in CMakeLists.txt) because it refuses to merge two.
+IDR_MANIFEST RT_MANIFEST "UniLoader.manifest"
+
+VS_VERSION_INFO VERSIONINFO
+  FILEVERSION    UL_APP_VERSION_MAJOR, UL_APP_VERSION_MINOR, UL_APP_VERSION_PATCH, 0
+  PRODUCTVERSION UL_APP_VERSION_MAJOR, UL_APP_VERSION_MINOR, UL_APP_VERSION_PATCH, 0
+  FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
+  FILEFLAGS      0
+  FILEOS         VOS_NT_WINDOWS32
+  FILETYPE       VFT_APP
+  FILESUBTYPE    VFT2_UNKNOWN
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "CompanyName",      "UniLoader contributors"
+      // FileDescription is what Task Manager shows as the process's name, so
+      // it carries the program's name rather than a sentence about it.
+      VALUE "FileDescription",  "Unification Mod Updater"
+      VALUE "FileVersion",      UL_APP_VERSION_STR
+      VALUE "InternalName",     "UniLoader"
+      VALUE "LegalCopyright",   "MIT licensed. Warcraft II is Blizzard Entertainment's."
+      VALUE "OriginalFilename", "Unification Mod Loader.exe"
+      VALUE "ProductName",      "Unification Mod Updater"
+      VALUE "ProductVersion",   UL_APP_VERSION_STR
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END
+
+#include "Strings.rc"

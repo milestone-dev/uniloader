@@ -1,0 +1,501 @@
+{
+    "_idRow": 644456,
+    "_nStatus": "0",
+    "_bIsPrivate": false,
+    "_bAccessorIsSubmitter": false,
+    "_bIsTrashed": false,
+    "_bIsWithheld": false,
+    "_sName": "War2 Unification mod",
+    "_sCommentsMode": "open",
+    "_tsDateModified": 1786302805,
+    "_tsDateAdded": 1767637068,
+    "_sProfileUrl": "https:\/\/gamebanana.com\/mods\/644456",
+    "_aPreviewMedia": {
+        "_aImages": [
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "695bdda9d2af9.jpg",
+                "_sFile220": "220-90_695bdda9d2af9.jpg",
+                "_hFile220": 165,
+                "_wFile220": 220,
+                "_sFile530": "530-90_695bdda9d2af9.jpg",
+                "_hFile530": 398,
+                "_wFile530": 530,
+                "_sFile100": "100-90_695bdda9d2af9.jpg",
+                "_hFile100": 75,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "695bddaa3f704.jpg",
+                "_sFile100": "100-90_695bddaa3f704.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "695bddaa840fa.jpg",
+                "_sFile100": "100-90_695bddaa840fa.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "695bddaabe40c.jpg",
+                "_sFile100": "100-90_695bddaabe40c.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "696b777731466.jpg",
+                "_sFile100": "100-90_696b777731466.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "69761776c97ff.jpg",
+                "_sFile100": "100-90_69761776c97ff.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "697d19be6b6fc.jpg",
+                "_sFile100": "100-90_697d19be6b6fc.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "697d19bdc12a3.jpg",
+                "_sFile100": "100-90_697d19bdc12a3.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "697d3bfb376cf.jpg",
+                "_sFile100": "100-90_697d3bfb376cf.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "697fe3b9525c8.jpg",
+                "_sFile100": "100-90_697fe3b9525c8.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "697fe3b9f235e.jpg",
+                "_sFile100": "100-90_697fe3b9f235e.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "699ed5bf4049a.jpg",
+                "_sFile100": "100-90_699ed5bf4049a.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "69ab6b92b6a90.jpg",
+                "_sFile100": "100-90_69ab6b92b6a90.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "69ab6b93022d5.jpg",
+                "_sFile100": "100-90_69ab6b93022d5.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "69af1bcf5cf52.jpg",
+                "_sFile100": "100-90_69af1bcf5cf52.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "69af1bcf7ba5f.jpg",
+                "_sFile100": "100-90_69af1bcf7ba5f.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "69af1bcfcc2db.jpg",
+                "_sFile100": "100-90_69af1bcfcc2db.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "69bea02c38a28.jpg",
+                "_sFile100": "100-90_69bea02c38a28.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "69c167c45e829.jpg",
+                "_sFile100": "100-90_69c167c45e829.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "69c2bb1c0daea.jpg",
+                "_sFile100": "100-90_69c2bb1c0daea.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "69ca4b39599c4.jpg",
+                "_sFile100": "100-90_69ca4b39599c4.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "69cee00ac787d.jpg",
+                "_sFile100": "100-90_69cee00ac787d.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "69d638087f55a.jpg",
+                "_sFile100": "100-90_69d638087f55a.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            },
+            {
+                "_sType": "screenshot",
+                "_sBaseUrl": "https:\/\/images.gamebanana.com\/img\/ss\/mods",
+                "_sFile": "69d6de7e5633b.jpg",
+                "_sFile100": "100-90_69d6de7e5633b.jpg",
+                "_hFile100": 57,
+                "_wFile100": 100
+            }
+        ]
+    },
+    "_nUpdatesCount": 55,
+    "_bHasUpdates": true,
+    "_tsDateUpdated": 1788088330,
+    "_nAllTodosCount": 0,
+    "_bHasTodos": false,
+    "_nPostCount": 36,
+    "_aTags": [],
+    "_bCreatedBySubmitter": true,
+    "_bIsPorted": false,
+    "_nThanksCount": 0,
+    "_sInitialVisibility": "show",
+    "_sDownloadUrl": "https:\/\/gamebanana.com\/mods\/download\/644456",
+    "_nDownloadCount": 39,
+    "_aFiles": [
+        {
+            "_idRow": 1596797,
+            "_sFile": "war2_unif_v1_1.rar",
+            "_nFilesize": 197,
+            "_tsDateAdded": 1767695059,
+            "_nDownloadCount": 38,
+            "_sDownloadUrl": "https:\/\/gamebanana.com\/dl\/1596797",
+            "_sMd5Checksum": "bf05158be5076be511c58341f388c26b",
+            "_sAnalysisState": "done",
+            "_sAnalysisResult": "ok",
+            "_sAnalysisResultVerbose": "File passed preliminary analysis",
+            "_sAvState": "done",
+            "_sAvResult": "clean",
+            "_bIsArchived": false,
+            "_bHasContents": true
+        }
+    ],
+    "_nSubscriberCount": 1,
+    "_aContributingStudios": [],
+    "_sLicense": "<a rel=\"license\" href=\"http:\/\/creativecommons.org\/licenses\/by-nc-nd\/4.0\/\"><img alt=\"Creative Commons License\" style=\"border-width:0\" src=\"https:\/\/i.creativecommons.org\/l\/by-nc-nd\/4.0\/88x31.png\" \/><\/a><br \/>This work is licensed under a <a rel=\"license\" href=\"http:\/\/creativecommons.org\/licenses\/by-nc-nd\/4.0\/\">Creative Commons Attribution-NonCommercial-NoDerivs 4.0 Unported License<\/a>.",
+    "_aLicenseChecklist": {
+        "yes": [
+            "Download and install this Mod"
+        ],
+        "ask": [
+            "Redistribute this Mod on other sites",
+            "Modify this Mod and distribute the modified Mod on GameBanana",
+            "Modify this Mod and distribute the modified Mod on another site",
+            "Use parts of this Mod in another Mod and distribute the Mod on GameBanana",
+            "Use parts of this Mod in another Mod and distribute the Mod on another site",
+            "Use this Mod or components of this Mod in adult\/NSFW content"
+        ],
+        "no": [
+            "Use this Mod or components of this Mod commercially"
+        ]
+    },
+    "_bGenerateTableOfContents": false,
+    "_sText": "hey buddies, danny back here<br><br>mod link:<br><a href=\"https:\/\/1drv.ms\/f\/c\/d7a2d372966ba7a1\/IgC5cE08yOfNRI3eA6w0giz7AcYrPIyDtdniV-ZOOBOUMcA?e=3tDhAJ\" target=\"_blank\">https:\/\/1drv.ms\/f\/c\/d7a2d372966ba7a1\/IgC5cE08yOfNRI3eA6w0giz7AYKBQTdCYwcoVeFKiqWTMvQ?e=x8DCs9<\/a><br><br><b class=\"SelectedElement\">***<u>Description<\/u>***<\/b><br><br>-Since about 2019 that have been doing war2 mods and i thought it would be a great time to make a mod that condensed all, if not most of the features that have been working with since then.<br><br>-I started this mod though as an intention to fully release a mod request from war2 community member: Supreme Anova, but eventually wanted to make better off a whole universal mod that can potentially include his sub-pack mod into here,<b> alongside many if not Most of the Mods I've made since 2019.<\/b><br><br>-If I'm not clear enough about description:<br>*This main Mod, Unification, is intended to be a <b>Compilation<\/b> from all the other Mods I've made since 2019. Say like: DAIFE, Insane Edition, Legacy of Dalaran Enhanced &amp; many others.<br><br>*Unification mod serves as a <b>base,<\/b> to allow all of the <b>Quality of Life features &amp; Enhancements,<\/b> being developed since 2019. From the most important ones, you can highlight:<br><b>Rally Points<\/b>,<b> Shift command<\/b>, <b>Training queue<\/b>,<b> Animated buildings<\/b>, AI-enhancements\/AI-fix features&nbsp;<br>(AI being smarter), War1\/War2\/War3 <b>modes,<\/b> Base game<b> tilesets<\/b> (4) + Custom ones (Currently, August 2026 are about 21), <b>Save-load<\/b> bug fixes since from War2DOS &amp; many more.<br><br>-The mod is initially made to work with base game + custom maps, but hopefully can be expanded to future mods that can be included into here, so i dont have to keep making sub-mod threads for each one of them. So everything may be included in here with just different plugins.<br><br>-The mod itself may sound similar to you with respect to other existing war2 mods like:&nbsp;<br>Multiplayer patch v11 (https:\/\/gamebanana.com\/mods\/507336) or&nbsp;<br>single player patch v12 (https:\/\/gamebanana.com\/mods\/514538)<br><br>but this mod is more likely intended to be the definitive mod, the ultimate attempt to compile as much as the work being done over 6 years into one single mod in 2026+ year.<br><br>-This is it, fellows, the greatest compilation from all features that I've made, thanks to Ed gorod's code, tenacity and hardwork into giving whole new features for Warcraft 2.&nbsp;<br>This is the ***<b>unification<\/b>*** mod for such a reason.<br><br>-This is my biggest attempt to compile all the features since I started modding around 2018-2019.<br>It's what I wanted to be a \"Warcraft 2 remaster\" way back before official War2 remaster was launched in november 2024.&nbsp;<br><br>-I never pretended to compete with Blizzard's remaster since 2024 but what&nbsp;<span class=\"HwtZe\" lang=\"en\"><span class=\"jCAhz ChMk0b\"><span class=\"ryNqvb\">I envisioned could ever feel like to have a modern version from Warcraft 2 with actual new features included to the game.. Ultimately, hope you have fun around buddy, as much as it took me to make all of these mods, including this one. The \"Warcraft 2 Fan Remaster\", but eventually named this mod as \"Unification\".<\/span><\/span><\/span><br><br><b>***<u>Features<\/u>***<\/b><br><br>-Well, the mod has so several files and features but will attempt to list all, if not most of them in a brief way.<br><b>*Base game plugin*<\/b><br>1) 20+ Tilesets, including base Forest, winter, wasteland &amp; orc swamp. In base game, randomized after restarting mission OR re-loading.<br><br>2) Several \"Damaged\" Portrait Icons, including all base game and some custom ones. Author: MFromAzeroth (https:\/\/www.youtube.com\/@mfromazeroth).<br><br>3) NGAS (New Gen. Audio System) feature that is available already in several mods like Road of Heroes, Trolls Revolution, QoL packs or Reversed Races.&nbsp;<br>Feature alone itself available in: (https:\/\/gamebanana.com\/mods\/617366)<br><br>4) Shift Command, like StarCraft.<br><br>5) Rally points, including flags for such.<br><br>6) Only available for base campaigns, custom maps and possible future mods. It can be combined right now with existing mods like DAIFE vanilla or Insane Edition vanilla.<br><br>7) Daytime Forest cycle. Like Warcraft 3, you can see all daytime stages in Forest tileset.<br><br>8) Each tileset (forest, winter, wasteland, swamp) is a group on itself for this mod, so for each group there can be randomized different set of tilesets. For more detailed Tilesets list, you can check out:<br>(https:\/\/gamebanana.com\/mods\/514538). In this mod is also included ZergCraft tileset for Forest pack.<br><br>9) Different set of audios (unit quotes), sprites, icons for the same unit (e.g: a Knight or Archer). Aka: different personalities for the same unit. They're randomized once they pop out from production facilities.<br><br>10) On this mod, its available to select <b>3 modes:<\/b> Warcraft 1 - Warcraft 2 - Warcraft 3 modes. To check hotkey, go in-game to Keystroke help option or with F1 keyboard key.<br>* <b>War1 mode<\/b> basically means: As many War1 unit\/building\/unit quotes I could import as possible into War2 engine. It includes NGAS feature.<br>* <b>War2 mode&nbsp;<\/b>- as default as i could possibly set, so audios are as base game in case you want to hear units in another language.<br>* <b>War3 mode<\/b> - this mod includes most of the modding i did across the years, including different unit audio quotes, sprites, icons.<br><br>11) Game Alerts, like Upgrade complete such as Warcraft 3 or Starcraft 1.<br>Including low gold left on mines, oil patches and died heroes.<br>Also, alerts for not enough gold, farms, lumber, oil, mana.&nbsp; All in war3-mode only.<br><br>12) Aside of daytime forest, there's raining (no thunder), raining storm (yes thunder), snowstorm (snowflakes) including environment audios for such. Some tilesets include these features like snowstorm tileset or Wetland or War1 swamp tileset.<br><br>13) Disabled Act &amp; cinematics for now on base campaigns.<br><br>14) For now (january 5th, 2026) i enabled&nbsp; Footman shield available (since castle tech, 30% damage reduction) that has been previously available in other mods like road of heroes or trolls revolution, but eventually can add up&nbsp;<br>other recent extra unit\/upgrades like Riflemen + upgrade from Reversed races mod. Hopefully can add up more upgrades in future.<br><br>15) Save-load fix feature.&nbsp;<br>More of it explained in: https:\/\/forum.war2.ru\/index.php?topic=6127.msg102091#msg102091<br><b>*Base game plugin*<\/b><br><br>16) Check keystroke help sub-menu in-game for all the Mod &amp; new keyboard shortcuts.<br><br>17) Peons wait to build: When a worker gets an order to build anything, if some new unit gets in place, peon will wait till that unit moves away and it will start to build.<br><br>18) Animated buildings for War1 &amp; War3 modes. This feature comes from Reversed races mod.<br>Thus far, january 5th, 2026 there are the next animated buildings. All of them mainly made for Forest\/Wasteland tilesets:<br><b>War1:<\/b><br>Orc barracks, human barracks, townhall, orc blacksmith<br><b>War2 - humans:<\/b><br>Castle, human blacksmith, human shipyard, human barracks<br><b>War2 - orcs:<\/b><br>war2 greathall alpha, stronghold - 2 versions, fortress, orc barracks, orc blacksmith - 2 versions, troll lumbermill, orc foundry - 2 versions, goblin alchemist.<br><br>War3mode: Animated buildings are available in every tileset <b>EXCEPT<\/b>&nbsp;Forest, Snowstorm, Winter, Glacier.<br>War1mode: Animated buildings are available in every tileset <b>EXCEPT<\/b>&nbsp;Forest.<br><br>19) Custom left UIs, the ones you see in left side during missions. In War3 mode, there're several of them available: 2 for orcs and 4 for humans if remember correctly. They're automatically disabled in war1 - war2 modes. There's a keyboard shortcut to disable it in war3 mode as well. These UIs are available in game resolution 960x544. Any other should have base game UIs.<br><br>20) Features that will be enabled for custom sub-mods on this one:<br>-AI fix plugin: https:\/\/forum.war2.ru\/index.php?topic=6127.msg102091#msg102091<br>-Repairable catapults\/ballistas<br>-Repairable ships in shorelines<br>-Repairable Gnomish Machines\/Goblin Zeppelins<br>-Units danny rebalance, like the changes you could see in mods like Road of heroes or Trolls revolution.&nbsp;<br>Aka: more hp, more attack speed for skeletons. More attack speed for archers\/trolls\/rangers\/berserkers\/dragons\/gryphons, cheaper healing, buffed flame shield, nerfed range\/mana cost for blizzard\/death &amp; decay and more.<br><br>21) War1 remaster music in War1 mode. War2 mode has default music. War3 mode has some custom fan-made music &amp; the one from War3. This music has been already available in several other mods like RoH or Trolls rev.<br><br>22)&nbsp; Some custom Hero sprites used here, coming from War2 Chocolate for Combat Edition&nbsp;<br>(https:\/\/gamebanana.com\/mods\/598292)<br><br>23) In war3 mode there're available all, if not most of War2 Alpha sprites &amp; icons being randomized with the rest from catalogue available. Buildings &amp; Units.<br><br>24) that's all i can remember for now.<br><br><u><b>***How to install &amp; play:***<\/b><\/u><br><br>1) Install War2Combat from: https:\/\/warcraft2.online<br><br>2) Decompress Mod pack and send UniFiles sub-folder to your War2Combat main folder.<br><br>3) Send \"Data\" folder to your War2 folder.&nbsp;<br><br>4) Send unification.exe to your War2 Combat folder.<br><br>5) Check Plugins folder from package<br><b>*Base game plugin*<\/b><br>* Send the plugin file 1 OR 2 from BaseGame sub-folder to your War2Combat\/Plugin sub-folder<br>* Plugin 1: No rally points + no repairable ships\/flyers\/catapults.<br>* Plugin 2: Yes rally points + repairable ships\/flyers\/catas.<br><b>*Base game plugin*<\/b><br><b>*Multiplayer plugin*<\/b><br>Check Plugin folder from package.<br>Send Plugin file from Multiplayer sub-folder to your Plugin folder in War2Combat main folder.<br><b>Disabled in multiplayer: <\/b><br>Forest - daytime cycle feature <br>Shift command <br>Rally points <br>Animated buildings <br>Auto-save commands<br><b>*Multiplayer plugin*<\/b><br><br><b>** NOTE **:<\/b>&nbsp;Use <b>ONE PLUGIN<\/b> at a time, from whichever mod you're going to play and then switch into.<br><br>6) load the game from unification.exe<br><br>*Advice: If you're looking up visual bugs with Custom User Interfaces (left side panels) in-game, then<br>download the last War2 Widescreen version from Fois, available in:&nbsp;<br>https:\/\/forum.war2.ru\/index.php?topic=6461.0<br><br>***&nbsp;<b><u>Feedback<\/u><\/b>&nbsp;***<br><br>If you would like to give me any feedback, then dont hesitate to join my both streaming channels:<br><br>https:\/\/twitch.tv\/dannyldd<br>OR<br>https:\/\/www.youtube.com\/channel\/UCfcxs8KSkOiehS9GK9rSAKg<br><br>If\r\n you would like to thank me for the work into these mods or support it \r\nto keep motivated for faster and future mods around, I'd appreciate if \r\nyou can donate anything you want to the paypal address:<br><br>https:\/\/www.paypal.me\/dannyldd<br><br>Good luck &amp; have fun",
+    "_bIsObsolete": false,
+    "_nLikeCount": 2,
+    "_nViewCount": 6519,
+    "_sVersion": "v6.6",
+    "_bAcceptsDonations": false,
+    "_bShowRipePromo": true,
+    "_aEmbeddables": {
+        "_sEmbeddableImageBaseUrl": "https:\/\/gamebanana.com\/mods\/embeddables\/644456",
+        "_aVariants": [
+            "small",
+            "small_square",
+            "medium",
+            "medium_square",
+            "medium_square_minimal",
+            "large",
+            "large_minimal",
+            "large_square",
+            "large_minimal_square",
+            "thumbnail"
+        ]
+    },
+    "_aSubmitter": {
+        "_idRow": 1738346,
+        "_sName": "dannyldd",
+        "_sUserTitle": "Bananite",
+        "_sHonoraryTitle": "",
+        "_tsJoinDate": 1593972079,
+        "_sAvatarUrl": "https:\/\/images.gamebanana.com\/img\/av\/5f03940b1d80f.png",
+        "_sSigUrl": "",
+        "_sProfileUrl": "https:\/\/gamebanana.com\/members\/1738346",
+        "_sPointsUrl": "https:\/\/gamebanana.com\/members\/logs\/pointslog\/1738346",
+        "_sMedalsUrl": "https:\/\/gamebanana.com\/members\/stats\/medals\/1738346",
+        "_bIsOnline": false,
+        "_sLocation": "<a href=\"https:\/\/gamebanana.com\">Home<\/a> > <a href=\"https:\/\/gamebanana.com\/games\/5904\"><img src=\"https:\/\/images.gamebanana.com\/img\/ico\/games\/595e9eeed7d26.gif\"\/><span>Warcraft 2: Tides of Darkness<\/span><\/a> > <a href=\"https:\/\/gamebanana.com\/mods\/games\/5904\">Mods<\/a> > <a href=\"https:\/\/gamebanana.com\/mods\/cats\/6393\">Maps<\/a> > <a href=\"https:\/\/gamebanana.com\/mods\/cats\/6394\">Singleplayer<\/a> > <a href=\"https:\/\/gamebanana.com\/mods\/644456\">War2 Unification mod<\/a>",
+        "_sOnlineTitle": "",
+        "_sOfflineTitle": "",
+        "_nPoints": 14364,
+        "_nPointsRank": 2325,
+        "_aNormalMedals": [
+            [
+                "m_age_1.png",
+                "One month a member",
+                "normal",
+                349851
+            ],
+            [
+                "m_age_2.png",
+                "6 months a member",
+                "normal",
+                349852
+            ],
+            [
+                "returns_1.png",
+                "Returned 100 times",
+                "normal",
+                424707
+            ],
+            [
+                "m_age_3.png",
+                "1 year a member",
+                "normal",
+                427255
+            ],
+            [
+                "m_pr_1.png",
+                "Reached 1,000 Points",
+                "normal",
+                516926
+            ],
+            [
+                "mods1.png",
+                "Submitted 5 Mods",
+                "normal",
+                522825
+            ],
+            [
+                "m_age_4.png",
+                "2 years a member",
+                "normal",
+                693177
+            ],
+            [
+                "m_pr_2.png",
+                "Reached 2,500 Points",
+                "normal",
+                762370
+            ],
+            [
+                "mods2.png",
+                "Submitted 10 Mods",
+                "normal",
+                765884
+            ],
+            [
+                "thanks_recvd_1.png",
+                "Received thanks 5 times",
+                "normal",
+                1674815
+            ],
+            [
+                "m_age_5.png",
+                "4 years a member",
+                "normal",
+                1952064
+            ],
+            [
+                "m_pr_3.png",
+                "Reached 7,500 Points",
+                "normal",
+                2240849
+            ]
+        ],
+        "_aRareMedals": [
+            [
+                "returns_2.png",
+                "Returned 1000 times",
+                "rare",
+                569358
+            ],
+            [
+                "new_game_pioneer.png",
+                "Became a Game Pioneer",
+                "rare",
+                713879
+            ],
+            [
+                "mods3.png",
+                "Submitted 15 Mods",
+                "rare",
+                942144
+            ],
+            [
+                "mods4.png",
+                "Submitted 20 Mods",
+                "rare",
+                1949477
+            ],
+            [
+                "m_age_6.png",
+                "6 years a member",
+                "rare",
+                5058547
+            ]
+        ],
+        "_aLegendaryMedals": [],
+        "_bHasRipe": false,
+        "_nBuddyCount": 4,
+        "_nSubscriberCount": 10,
+        "_aDonationMethods": [],
+        "_bAccessorIsBuddy": false,
+        "_bBuddyRequestExistsWithAccessor": false,
+        "_bAccessorIsSubscribed": false,
+        "_aDefaultLicenseChecklist": [
+            "yes",
+            "ask",
+            "ask",
+            "ask",
+            "ask",
+            "ask",
+            "no",
+            "ask"
+        ],
+        "_sDefaultLicense": ""
+    },
+    "_bFollowLinks": true,
+    "_aGame": {
+        "_idRow": 5904,
+        "_sName": "Warcraft 2: Tides of Darkness",
+        "_sAbbreviation": "WC2",
+        "_sProfileUrl": "https:\/\/gamebanana.com\/games\/5904",
+        "_sIconUrl": "https:\/\/images.gamebanana.com\/img\/ico\/games\/595e9eeed7d26.gif",
+        "_sBannerUrl": "https:\/\/images.gamebanana.com\/img\/ico\/games\/595e9eeed7d26.gif",
+        "_nSubscriberCount": 21,
+        "_bHasSubmissionQueue": false,
+        "_bAccessorIsSubscribed": false
+    },
+    "_aCategory": {
+        "_idRow": 6394,
+        "_sName": "Singleplayer",
+        "_sModelName": "ModCategory",
+        "_sProfileUrl": "https:\/\/gamebanana.com\/mods\/cats\/6394",
+        "_sIconUrl": "",
+        "_bIsObsolete": false
+    },
+    "_aSuperCategory": {
+        "_idRow": 6393,
+        "_sName": "Maps",
+        "_sModelName": "ModCategory",
+        "_sProfileUrl": "https:\/\/gamebanana.com\/mods\/cats\/6393",
+        "_sIconUrl": ""
+    },
+    "_aAlternateFileSources": [
+        {
+            "url": "https:\/\/www.youtube.com\/playlist?list=PLrHhAf18bMUOiSnWLE8sJa656iEFze84M",
+            "description": "mod playlist"
+        },
+        {
+            "url": "https:\/\/www.youtube.com\/watch?v=MO3MIWIPrkY",
+            "description": "Admiral Iddy mod showcase"
+        }
+    ],
+    "_aCredits": [
+        {
+            "_sGroupName": "Key Authors",
+            "_aAuthors": [
+                {
+                    "_sRole": "MOD author",
+                    "_sName": "dannyldd"
+                }
+            ]
+        },
+        {
+            "_sGroupName": "Contributors",
+            "_aAuthors": [
+                {
+                    "_sRole": "New generation war2 modding features provider & helper with functions",
+                    "_sName": "Ed gorod"
+                }
+            ]
+        },
+        {
+            "_sGroupName": "Special Thanks",
+            "_aAuthors": [
+                {
+                    "_sRole": "Game author",
+                    "_sName": "Blizzard Entertainment"
+                },
+                {
+                    "_sRole": "BigFoot7, Spamt0n & ScareClown - helped testing the mod in War2Combat multiplayer server",
+                    "_sName": "Helpers"
+                }
+            ]
+        }
+    ]
+}

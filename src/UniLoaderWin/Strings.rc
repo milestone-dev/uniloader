@@ -1,0 +1,72 @@
+// Every user-visible string in the client.
+//
+// Here rather than in a .cpp so that they can be read, corrected and translated
+// without touching code, and so that "what does this program actually say" is
+// one file rather than a grep. UTF-8, no BOM; the build passes /c65001.
+
+#include "strings.h"
+
+STRINGTABLE
+BEGIN
+  IDS_APP_TITLE           "Unification Mod Updater"
+
+  IDS_CHECKING            "Checking for updates…"
+  IDS_UP_TO_DATE          "Unification mod installed and up to date."
+  IDS_UPDATE_AVAILABLE    "Unification mod update available. You have %s."
+  IDS_NOT_INSTALLED       "Unification mod is not installed yet."
+  IDS_INSTALLED           "Unification mod installed."
+  IDS_DOWNLOADING         "Downloading %s — %s of %s"
+  IDS_EXTRACTING          "Unpacking…"
+  IDS_INSTALLING          "Copying files into War2Combat…"
+  IDS_REMOVING            "Putting War2Combat back the way it was…"
+  IDS_DONE                "Done."
+  IDS_CANCELLED           "Cancelled. Nothing was changed."
+  IDS_USING_CACHE         "Already downloaded — installing from the copy kept on this machine."
+  IDS_SETTINGS_CACHE      "A downloaded release that nothing is using."
+  IDS_CLEAR_CACHE         "Delete it (%s)"
+  // IDS_CACHE_EMPTY retired: the row is not shown when there is nothing to delete.
+  IDS_DISPLAY             "Display"
+  IDS_DISPLAY_MODE        "Screen"
+  IDS_MODE_FULLSCREEN     "Fullscreen"
+  IDS_MODE_BORDERLESS     "Borderless window"
+  IDS_MODE_WINDOWED       "Windowed"
+  IDS_KEEP_ASPECT         "Keep the original 4:3 shape (do not stretch)"
+  IDS_SMOOTHING           "Smoothing"
+  IDS_SMOOTHING_NONE      "None — sharp pixels"
+  IDS_NO_DISPLAY_CONFIG   "War2Combat's display settings were not found in this folder."
+  IDS_LISTING             "Finding the package on OneDrive…"
+
+  IDS_ACTION_INSTALL      "Install Unification Mod"
+  IDS_ACTION_UPDATE       "Update"
+  IDS_ACTION_CANCEL       "Cancel"
+  IDS_ACTION_CHECK        "Check for updates"
+  IDS_PLAY                "Play"
+  IDS_UNINSTALL           "Uninstall"
+  IDS_NO_PLUGIN           "No plugin"
+  IDS_PLAY_NAMED          "Play %s"
+  IDS_NO_PLUGIN_ABOUT     "No plugins loaded. Select a plugin from the list to play it."
+  IDS_PLUGINS_HEADING     "Plugins"
+  IDS_CHANGE_FOLDER       "Change…"
+  IDS_MOD_PAGE            "Mod page"
+  IDS_CHANGELOG           "Changelog"
+  IDS_SETTINGS            "Settings"
+  IDS_CLOSE               "Close"
+  IDS_SETTINGS_TITLE      "Unification Mod Updater settings"
+  IDS_SETTINGS_FOLDER     "War2Combat is installed in"
+  IDS_SETTINGS_STORE      "Unification Mod Updater keeps the mod and its backups in"
+  IDS_CHANGELOG_TITLE     "%s — changelog"
+  IDS_CHANGELOG_EMPTY     "No release notes were found. Check for updates first, or open the mod page."
+  IDS_SETTINGS_INSTALLED  "%s is installed."
+  IDS_SETTINGS_NOTHING    "Nothing is installed yet."
+  IDS_SHOT_COUNT          "%d of %d"
+
+  IDS_ERR_NO_GAME         "War2Combat was not found. Choose the folder it is installed in — the one holding war2.exe."
+  IDS_ERR_NO_ARCHIVE_LINK "The mod page says %s is the current version, but none of the links on it lead to the package. dannyldd can fix this by adding a direct link to the package file as an alternate file source on the mod page."
+  IDS_ERR_FOLDER_LINK     "The OneDrive folder on the mod page could not be read. Microsoft changes how these are shared from time to time; use Mod page to download the package the usual way, and please report this so it can be fixed."
+  IDS_ERR_NETWORK         "Could not reach %s. Check the connection and try again."
+  IDS_ERR_NEEDS_ADMIN     "Writing to %s needs administrator rights. Unification Mod Updater will ask for them and carry on."
+  IDS_ERR_GAME_RUNNING    "Warcraft II is running. Close it first — its files cannot be changed while it has them open."
+
+  IDS_CONFIRM_UNINSTALL   "Remove %s from War2Combat?\n\nEvery file Unification Mod Updater copied in will be deleted, and anything it replaced will be put back. Files that were already there and were not touched are left alone."
+  IDS_FIND_GAME           "Where is War2Combat installed?"
+END

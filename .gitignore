@@ -1,0 +1,9 @@
+build/
+out/
+*.user
+*.aps
+.vs/
+*.lnk
+
+# Project notes and conversation logs, not part of the source.
+info.md

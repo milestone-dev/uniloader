@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.rc  text working-tree-encoding=UTF-8 eol=CRLF
+*.ico binary
+*.bmp binary
+*.png binary
+*.rar binary
+src/UniLoaderCore/thirdparty/** linguist-vendored

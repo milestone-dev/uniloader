@@ -1,0 +1,77 @@
+{
+ "@odata.context": "https://my.microsoftpersonalcontent.com/personal/d7a2d372966ba7a1/_api/v2.0/$metadata#items",
+ "value": [
+  {
+   "lastModifiedDateTime": "2026-04-26T16:19:21Z",
+   "name": "1_war2_unification_older_versions",
+   "folder": {
+    "childCount": 4,
+    "folderType": "documents",
+    "folderView": {
+     "sortBy": "name",
+     "sortOrder": "ascending",
+     "viewType": "thumbnails"
+    }
+   },
+   "size": 2558764140
+  },
+  {
+   "lastModifiedDateTime": "2026-06-07T16:15:12Z",
+   "name": "2_Co-ops_daife_insane_customs (not currently updated)",
+   "folder": {
+    "childCount": 6,
+    "folderType": "documents",
+    "folderView": {
+     "sortBy": "name",
+     "sortOrder": "ascending",
+     "viewType": "thumbnails"
+    }
+   },
+   "size": 3954635
+  },
+  {
+   "lastModifiedDateTime": "2026-07-08T19:29:31Z",
+   "name": "3_others",
+   "folder": {
+    "childCount": 1,
+    "folderType": "documents",
+    "folderView": {
+     "sortBy": "name",
+     "sortOrder": "ascending",
+     "viewType": "thumbnails"
+    }
+   },
+   "size": 4366895
+  },
+  {
+   "@content.downloadUrl": "https://my.microsoftpersonalcontent.com/personal/d7a2d372966ba7a1/_layouts/15/download.aspx?UniqueId=17f018e3-d8c5-4b40-bf62-c64d24b451c7&Translate=false&tempauth=REDACTED&ApiVersion=2.0",
+   "lastModifiedDateTime": "2026-08-13T01:51:25Z",
+   "name": "war2_unif_v6_4.rar",
+   "file": {
+    "fileExtension": ".rar",
+    "hashes": {
+     "quickXorHash": "eVT8GrnB6PiD7ZIWJ7IXwVjuNB0="
+    },
+    "irmEffectivelyEnabled": false,
+    "irmEnabled": false,
+    "mimeType": "application/octet-stream"
+   },
+   "size": 836157230
+  },
+  {
+   "@content.downloadUrl": "https://my.microsoftpersonalcontent.com/personal/d7a2d372966ba7a1/_layouts/15/download.aspx?UniqueId=3b72dc60-f316-4a10-a712-d04561c1bcf1&Translate=false&tempauth=REDACTED&ApiVersion=2.0",
+   "lastModifiedDateTime": "2026-08-30T11:28:52Z",
+   "name": "war2_unif_v6_6.rar",
+   "file": {
+    "fileExtension": ".rar",
+    "hashes": {
+     "quickXorHash": "YhB/DjsEKk1lypx0J1yOcxaXihw="
+    },
+    "irmEffectivelyEnabled": false,
+    "irmEnabled": false,
+    "mimeType": "application/octet-stream"
+   },
+   "size": 841949927
+  }
+ ]
+}

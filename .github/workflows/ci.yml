@@ -1,0 +1,99 @@
+name: CI
+
+# Windows only. The client is the product and it is the one target that cannot
+# be built anywhere else, so a green run here is the thing worth having — and
+# the install tests only run on Windows, which are the tests that matter most.
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+# The release step creates a tag and uploads to it.
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: windows-latest
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure
+        run: cmake -S src -B build -A x64
+
+      - name: Build
+        run: cmake --build build --config Release -- -m
+
+      # Through CTest rather than the binary directly: each group is its own
+      # job, so a failure names the group instead of burying it in one log.
+      - name: Test
+        run: ctest --test-dir build -C Release -j4 --output-on-failure
+
+      # The version the binary already carries, rather than a second one kept
+      # here: version.h feeds the title bar, About, --version and the
+      # VERSIONINFO block Explorer reads, and a release tagged anything else
+      # would be a release nobody could identify from the exe.
+      - name: Read version
+        id: version
+        shell: pwsh
+        run: |
+          $file = 'src/UniLoaderWin/version.h'
+          $match = Select-String -Path $file -Pattern '#define UL_APP_VERSION_STR\s+"([^"]+)"'
+          if (-not $match) { throw "no UL_APP_VERSION_STR in $file" }
+          $version = $match.Matches[0].Groups[1].Value
+          # Asked of the remote rather than of the checkout: actions/checkout
+          # fetches no tags, so a local `git tag -l` would call every version
+          # new and every run would try to release.
+          $existing = git ls-remote --tags origin "refs/tags/v$version"
+          $isNew = [string]::IsNullOrWhiteSpace($existing)
+          "version=$version" | Out-File $env:GITHUB_OUTPUT -Append
+          "is_new=$($isNew.ToString().ToLower())" | Out-File $env:GITHUB_OUTPUT -Append
+          if ($isNew) {
+            "v$version is new - this run will release it"
+          } else {
+            "v$version is already released - bump version.h to cut another"
+          }
+
+      - name: Upload the build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Unification-Mod-Loader-${{ steps.version.outputs.version }}
+          path: build/UniLoaderWin/Release/Unification Mod Loader.exe
+
+      # Only from master, and only once per version. version.h asks for a patch
+      # bump on every commit, so a commit that bumps it ships and one that does
+      # not just builds — rather than failing on a tag that already exists.
+      - name: Release
+        if: >-
+          github.event_name == 'push' &&
+          github.ref == 'refs/heads/master' &&
+          steps.version.outputs.is_new == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $v = '${{ steps.version.outputs.version }}'
+          # The notes are CHANGELOG.md's section for this version, verbatim: the
+          # words somebody wrote while making the change are better than anything
+          # generated here, and having one place to write them is why the file
+          # exists. A version with no section still ships — a release held back
+          # over a missing heading helps nobody.
+          # Read through .NET so the em dashes survive the runner's codepage.
+          $lines = [System.IO.File]::ReadAllLines((Resolve-Path CHANGELOG.md))
+          $from = ($lines | Select-String -Pattern "^## $([regex]::Escape($v))\s*$" |
+                   Select-Object -First 1).LineNumber
+          $notes = "Unification Mod Loader $v"
+          if ($from) {
+            $rest = $lines[$from..($lines.Length - 1)]
+            $stop = ($rest | Select-String -Pattern '^## ' | Select-Object -First 1)
+            $body = if ($stop) { $rest[0..($stop.LineNumber - 2)] } else { $rest }
+            $notes = ($body -join "`n").Trim()
+          }
+          [System.IO.File]::WriteAllText("$env:RUNNER_TEMP\notes.md", $notes)
+          git tag "v$v"
+          git push origin "v$v"
+          gh release create "v$v" `
+            'build/UniLoaderWin/Release/Unification Mod Loader.exe' `
+            --title "Unification Mod Loader $v" --notes-file "$env:RUNNER_TEMP\notes.md"
