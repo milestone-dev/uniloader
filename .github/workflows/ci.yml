@@ -56,11 +56,19 @@ jobs:
             "v$version is already released - bump version.h to cut another"
           }
 
+      # GitHub replaces spaces in release asset names with dots, so the asset
+      # carries the one spelling that survives: no spaces at all.
+      - name: Name the release exe
+        shell: pwsh
+        run: >-
+          Copy-Item 'build/UniLoaderWin/Release/Unification Mod Loader.exe'
+          build/UniLoaderWin/Release/UnificationModLoader.exe
+
       - name: Upload the build
         uses: actions/upload-artifact@v4
         with:
-          name: Unification-Mod-Loader-${{ steps.version.outputs.version }}
-          path: build/UniLoaderWin/Release/Unification Mod Loader.exe
+          name: UnificationModLoader-${{ steps.version.outputs.version }}
+          path: build/UniLoaderWin/Release/UnificationModLoader.exe
 
       # Only from master, and only once per version. version.h asks for a patch
       # bump on every commit, so a commit that bumps it ships and one that does
@@ -95,5 +103,5 @@ jobs:
           git tag "v$v"
           git push origin "v$v"
           gh release create "v$v" `
-            'build/UniLoaderWin/Release/Unification Mod Loader.exe' `
+            build/UniLoaderWin/Release/UnificationModLoader.exe `
             --title "Unification Mod Loader $v" --notes-file "$env:RUNNER_TEMP\notes.md"

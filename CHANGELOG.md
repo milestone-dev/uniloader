@@ -3,7 +3,7 @@
 What changed in each release, in the words a user would use. This file is what
 the GitHub release notes are made of.
 
-## 1.0.1
+## 1.0.2
 
 First release. Unification Mod Loader manages dannyldd's War2 Unification mod
 in a War2Combat install:
