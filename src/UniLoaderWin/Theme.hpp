@@ -17,6 +17,21 @@ namespace ulwin {
 void CreateTheme();
 void DestroyTheme();
 
+/// Whether the painted theme is in use at all. Off puts the program back in
+/// the plain Windows look: no owner-drawing, no parchment, system colours.
+///
+/// Read wherever a control is created, so it must be settled before the window
+/// is built — owner-draw is a creation-time style and cannot be turned on or
+/// off under a control that already exists. That is why the switch in Settings
+/// takes effect when the program next starts.
+bool ThemeEnabled();
+void SetThemeEnabled(bool on);
+
+/// `bits` when the theme is on, nothing when it is off. For the owner-draw
+/// style flags, which are the difference between a themed control and a
+/// stock one: `ThemedStyle(BS_OWNERDRAW)`.
+DWORD ThemedStyle(DWORD bits);
+
 /// The parchment, as a tiling pattern brush. The window class background, and
 /// what the statics hand back from WM_CTLCOLORSTATIC.
 HBRUSH ThemeBackgroundBrush();

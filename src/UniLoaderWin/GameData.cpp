@@ -15,6 +15,7 @@ namespace {
 
 constexpr wchar_t kRegKey[] = L"Software\\UniLoader";
 constexpr wchar_t kRegValue[] = L"GamePath";
+constexpr wchar_t kThemeValue[] = L"UseTheme";
 
 /// Where the installers put it, tried in order when nothing is remembered — so
 /// the common case never sees a dialog at all.
@@ -134,6 +135,36 @@ void RememberGameFolder(const std::wstring& folder) {
   RegSetValueExW(key, kRegValue, 0, REG_SZ,
                  reinterpret_cast<const BYTE*>(folder.c_str()),
                  static_cast<DWORD>((folder.size() + 1) * sizeof(wchar_t)));
+  RegCloseKey(key);
+}
+
+bool ThemeWanted() {
+  // Absent, unreadable, or the wrong type all mean on. The theme is the
+  // default, and a missing value is exactly what a first run has.
+  HKEY key = nullptr;
+  if (RegOpenKeyExW(HKEY_CURRENT_USER, kRegKey, 0, KEY_READ, &key) !=
+      ERROR_SUCCESS) {
+    return true;
+  }
+  DWORD value = 0;
+  DWORD size = sizeof(value);
+  DWORD type = 0;
+  const LSTATUS read = RegQueryValueExW(key, kThemeValue, nullptr, &type,
+                                        reinterpret_cast<BYTE*>(&value), &size);
+  RegCloseKey(key);
+  if (read != ERROR_SUCCESS || type != REG_DWORD) return true;
+  return value != 0;
+}
+
+void RememberThemeWanted(bool wanted) {
+  HKEY key = nullptr;
+  if (RegCreateKeyExW(HKEY_CURRENT_USER, kRegKey, 0, nullptr, 0, KEY_WRITE,
+                      nullptr, &key, nullptr) != ERROR_SUCCESS) {
+    return;
+  }
+  const DWORD value = wanted ? 1u : 0u;
+  RegSetValueExW(key, kThemeValue, 0, REG_DWORD,
+                 reinterpret_cast<const BYTE*>(&value), sizeof(value));
   RegCloseKey(key);
 }
 

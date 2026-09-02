@@ -2,6 +2,7 @@
 
 #include <commctrl.h>   // NM_CUSTOMDRAW, for the themed checkbox
 
+#include "GameData.hpp"   // the remembered look
 #include "Net.hpp"       // OpenInBrowser, for the project page
 #include "Strings.hpp"
 #include "Theme.hpp"
@@ -93,7 +94,8 @@ void LayoutSettings(HWND window) {
   if (uninstall) MoveWindow(uninstall, margin, y, 200, 30, TRUE);
   y += 30 + 18;
 
-  place(IDC_DLG_ABOUT, 22, 16);
+  place(IDC_DLG_ABOUT, 22, 12);
+  place(IDC_DLG_THEME, 22, 16);
 
   // Usually not there at all, and then it takes no room either — leaving the
   // gap behind would put a hole above Close that nothing explains.
@@ -165,6 +167,20 @@ LRESULT CALLBACK Proc(HWND window, UINT message, WPARAM w, LPARAM l) {
         case IDC_DLG_ASPECT:
           if (HIWORD(w) == BN_CLICKED) ReadDisplay(window);
           return 0;
+        case IDC_DLG_THEME:
+          // Remembered as it is ticked, and said out loud: owner-draw is a
+          // creation-time style, so this window and the one behind it keep the
+          // look they were built with. Without the alert the tick is the only
+          // thing that happens, and it reads as a setting that does nothing.
+          if (HIWORD(w) == BN_CLICKED) {
+            RememberThemeWanted(
+                SendMessageW(GetDlgItem(window, IDC_DLG_THEME), BM_GETCHECK, 0,
+                             0) == BST_CHECKED);
+            MessageBoxW(window, Text(IDS_THEME_RESTART).c_str(),
+                        Text(IDS_SETTINGS_TITLE).c_str(),
+                        MB_OK | MB_ICONINFORMATION);
+          }
+          return 0;
         default: return 0;
       }
     case WM_DRAWITEM: {
@@ -187,6 +203,8 @@ LRESULT CALLBACK Proc(HWND window, UINT message, WPARAM w, LPARAM l) {
     case WM_CTLCOLORSTATIC: {
       // Ink on parchment for the labels; the changelog's read-only body gets
       // the panel colour, the way the main window's description does.
+      // System colours: let the default handler answer.
+      if (!ThemeEnabled()) return DefWindowProcW(window, message, w, l);
       HDC dc = reinterpret_cast<HDC>(w);
       SetTextColor(dc, ThemeInk());
       if (GetDlgCtrlID(reinterpret_cast<HWND>(l)) == IDC_DLG_TEXT) {
@@ -211,8 +229,10 @@ LRESULT CALLBACK Proc(HWND window, UINT message, WPARAM w, LPARAM l) {
       // The one checkbox, custom-drawn in the game's preferences style. The
       // control still owns its check state — this only paints it.
       const auto* header = reinterpret_cast<const NMHDR*>(l);
-      if (header && header->idFrom == IDC_DLG_ASPECT &&
-          header->code == NM_CUSTOMDRAW) {
+      const bool painted_box =
+          ThemeEnabled() && header &&
+          (header->idFrom == IDC_DLG_ASPECT || header->idFrom == IDC_DLG_THEME);
+      if (painted_box && header->code == NM_CUSTOMDRAW) {
         auto* draw = reinterpret_cast<NMCUSTOMDRAW*>(l);
         if (draw->dwDrawStage == CDDS_PREERASE ||
             draw->dwDrawStage == CDDS_PREPAINT) {
@@ -382,7 +402,7 @@ void ShowChangelog(HWND owner, const ul_release* release) {
         ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL | WS_BORDER |
             WS_TABSTOP,
         IDC_DLG_TEXT, modal.font);
-  Child(window, L"BUTTON", Text(IDS_CLOSE), BS_OWNERDRAW | WS_TABSTOP,
+  Child(window, L"BUTTON", Text(IDS_CLOSE), ThemedStyle(BS_OWNERDRAW) | WS_TABSTOP,
         IDC_DLG_CLOSE, modal.font);
 
   CentreOn(owner, window, 640, 560);
@@ -426,7 +446,7 @@ DialogAction ShowSettings(HWND owner, const std::wstring& game_folder,
         modal.font);
   Child(window, L"STATIC", game_folder.empty() ? Text(IDS_ERR_NO_GAME) : game_folder,
         SS_LEFT | SS_PATHELLIPSIS, IDC_DLG_FOLDER_PATH, modal.font);
-  Child(window, L"BUTTON", Text(IDS_CHANGE_FOLDER), BS_OWNERDRAW | WS_TABSTOP,
+  Child(window, L"BUTTON", Text(IDS_CHANGE_FOLDER), ThemedStyle(BS_OWNERDRAW) | WS_TABSTOP,
         IDC_DLG_CHANGE_FOLDER, modal.font);
 
   Child(window, L"STATIC", Text(IDS_SETTINGS_STORE), SS_LEFT, IDC_DLG_STORE, modal.font);
@@ -438,7 +458,7 @@ DialogAction ShowSettings(HWND owner, const std::wstring& game_folder,
           ? Text(IDS_SETTINGS_NOTHING)
           : Format(IDS_SETTINGS_INSTALLED, installed_version.c_str());
   HWND remove = Child(window, L"BUTTON", Text(IDS_UNINSTALL) + L"…",
-                      BS_OWNERDRAW | WS_TABSTOP, IDC_DLG_UNINSTALL, modal.font);
+                      ThemedStyle(BS_OWNERDRAW) | WS_TABSTOP, IDC_DLG_UNINSTALL, modal.font);
   // Nothing installed, or something already running: there is nothing to undo,
   // and a button that would start a second job while the first is going is a
   // button that should not be pressable.
@@ -450,10 +470,10 @@ DialogAction ShowSettings(HWND owner, const std::wstring& game_folder,
   Child(window, L"STATIC", Text(IDS_DISPLAY_MODE), SS_LEFT | SS_CENTERIMAGE,
         IDC_DLG_MODE_LABEL, modal.font);
   HWND mode = Child(window, L"COMBOBOX", L"",
-                    CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS |
+                    CBS_DROPDOWNLIST | ThemedStyle(CBS_OWNERDRAWFIXED) | CBS_HASSTRINGS |
                         WS_VSCROLL | WS_TABSTOP,
                     IDC_DLG_MODE, modal.font);
-  ThemeDropdown(mode);
+  if (ThemeEnabled()) ThemeDropdown(mode);
   for (UINT label : {IDS_MODE_FULLSCREEN, IDS_MODE_BORDERLESS, IDS_MODE_WINDOWED}) {
     SendMessageW(mode, CB_ADDSTRING, 0,
                  reinterpret_cast<LPARAM>(Text(label).c_str()));
@@ -463,10 +483,10 @@ DialogAction ShowSettings(HWND owner, const std::wstring& game_folder,
   Child(window, L"STATIC", Text(IDS_SMOOTHING), SS_LEFT | SS_CENTERIMAGE,
         IDC_DLG_SHADER_LABEL, modal.font);
   HWND shader = Child(window, L"COMBOBOX", L"",
-                      CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS |
+                      CBS_DROPDOWNLIST | ThemedStyle(CBS_OWNERDRAWFIXED) | CBS_HASSTRINGS |
                           WS_VSCROLL | WS_TABSTOP,
                       IDC_DLG_SHADER, modal.font);
-  ThemeDropdown(shader);
+  if (ThemeEnabled()) ThemeDropdown(shader);
   for (size_t i = 0; i < display.shaders.size(); ++i) {
     // The first entry is the empty string, which is "no filter". The rest are
     // whatever .glsl files the game folder happens to hold — listed by name
@@ -506,13 +526,20 @@ DialogAction ShowSettings(HWND owner, const std::wstring& game_folder,
   if (!cache_size.empty()) {
     Child(window, L"STATIC", Text(IDS_SETTINGS_CACHE), SS_LEFT, IDC_DLG_CACHE, modal.font);
     HWND clear = Child(window, L"BUTTON", Format(IDS_CLEAR_CACHE, cache_size.c_str()),
-                       BS_OWNERDRAW | WS_TABSTOP, IDC_DLG_CLEAR_CACHE, modal.font);
+                       ThemedStyle(BS_OWNERDRAW) | WS_TABSTOP, IDC_DLG_CLEAR_CACHE, modal.font);
     EnableWindow(clear, busy ? FALSE : TRUE);
   }
 
-  Child(window, L"BUTTON", Text(IDS_PROJECT_PAGE), BS_OWNERDRAW | WS_TABSTOP,
-        IDC_DLG_PROJECT, modal.font);
-  Child(window, L"BUTTON", Text(IDS_CLOSE), BS_OWNERDRAW | WS_TABSTOP,
+  // The look of the program itself, rather than of the game: last, under the
+  // rest, because it is the one setting here that is about this window.
+  HWND theme = Child(window, L"BUTTON", Text(IDS_USE_THEME),
+                     BS_AUTOCHECKBOX | WS_TABSTOP, IDC_DLG_THEME, modal.font);
+  SendMessageW(theme, BM_SETCHECK, ThemeWanted() ? BST_CHECKED : BST_UNCHECKED,
+               0);
+
+  Child(window, L"BUTTON", Text(IDS_PROJECT_PAGE),
+        ThemedStyle(BS_OWNERDRAW) | WS_TABSTOP, IDC_DLG_PROJECT, modal.font);
+  Child(window, L"BUTTON", Text(IDS_CLOSE), ThemedStyle(BS_OWNERDRAW) | WS_TABSTOP,
         IDC_DLG_CLOSE, modal.font);
 
   CentreOn(owner, window, 560, cache_size.empty() ? 496 : 552);

@@ -59,6 +59,7 @@ struct Theme {
 };
 
 Theme g_theme;
+bool g_themed = true;
 
 /// A guide pixel: pure black, and actually there. Nothing merely dark counts —
 /// the button's hand-drawn outer ring is 2C1A00, which a "dark enough" test
@@ -363,6 +364,9 @@ void Line(HDC dc, int x1, int y1, int x2, int y2, COLORREF colour) {
 }  // namespace
 
 void CreateTheme() {
+  // Nothing to build when the plain look was asked for: the brushes answer in
+  // system colours, and no control is owner-drawn to want the rest.
+  if (!g_themed) return;
   if (g_theme.background) return;
   g_theme.parchment = MakeParchment(256);
   g_theme.background = g_theme.parchment ? CreatePatternBrush(g_theme.parchment)
@@ -452,8 +456,18 @@ void DestroyTheme() {
   g_theme = Theme{};
 }
 
-HBRUSH ThemeBackgroundBrush() { return g_theme.background; }
-HBRUSH ThemePanelBrush() { return g_theme.panel; }
+bool ThemeEnabled() { return g_themed; }
+void SetThemeEnabled(bool on) { g_themed = on; }
+DWORD ThemedStyle(DWORD bits) { return g_themed ? bits : 0u; }
+
+// Turned off, the two brushes answer in system colours: they are handed to a
+// window class and to WM_CTLCOLOR*, both of which want a brush either way.
+HBRUSH ThemeBackgroundBrush() {
+  return g_themed ? g_theme.background : GetSysColorBrush(COLOR_BTNFACE);
+}
+HBRUSH ThemePanelBrush() {
+  return g_themed ? g_theme.panel : GetSysColorBrush(COLOR_WINDOW);
+}
 COLORREF ThemeInk() { return kInk; }
 COLORREF ThemeInkFaint() { return kInkFaint; }
 COLORREF ThemePanel() { return kPanel; }

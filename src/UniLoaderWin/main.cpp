@@ -176,6 +176,10 @@ std::wstring ForRichEdit(const std::wstring& text) {
 /// red are the same range by construction. `text` must be the string the
 /// control was given: RichEdit counts the CR-only breaks the way this does.
 void MarkLinks(HWND control, const std::wstring& text) {
+  // Without the theme the control's own detector is on and colours them the
+  // system blue, which is the look being asked for.
+  if (!ThemeEnabled()) return;
+
   CHARFORMAT2W link = {};
   link.cbSize = sizeof(link);
   link.dwMask = CFM_LINK | CFM_COLOR | CFM_UNDERLINE;
@@ -2002,21 +2006,29 @@ void Create() {
   metrics.lfMessageFont.lfWeight = FW_SEMIBOLD;
   g.bold_font = CreateFontIndirectW(&metrics.lfMessageFont);
   // Owner-drawn, all of them: the menu style is painted in DrawThemedButton.
+  // Without the theme the bit goes and they are ordinary Windows buttons.
+  const DWORD owner_button = ThemedStyle(BS_OWNERDRAW);
   g.changelog = Child(L"BUTTON", Text(IDS_CHANGELOG).c_str(),
-                      BS_OWNERDRAW | WS_TABSTOP, IDC_CHANGELOG);
+                      owner_button | WS_TABSTOP, IDC_CHANGELOG);
   g.settings = Child(L"BUTTON", Text(IDS_SETTINGS).c_str(),
-                     BS_OWNERDRAW | WS_TABSTOP, IDC_SETTINGS);
+                     owner_button | WS_TABSTOP, IDC_SETTINGS);
   g.modpage = Child(L"BUTTON", Text(IDS_MOD_PAGE).c_str(),
-                    BS_OWNERDRAW | WS_TABSTOP, IDC_MOD_LINK);
+                    owner_button | WS_TABSTOP, IDC_MOD_LINK);
   g.status = Child(L"STATIC", L"", SS_LEFT | SS_ENDELLIPSIS | SS_CENTERIMAGE,
                    IDC_STATUS);
   g.latest = Child(L"STATIC", L"", SS_LEFT | SS_ENDELLIPSIS | SS_CENTERIMAGE,
                    IDC_LATEST);
   g.action = Child(L"BUTTON", Text(IDS_ACTION_CHECK).c_str(),
-                   BS_OWNERDRAW | WS_TABSTOP, IDC_ACTION);
+                   owner_button | WS_TABSTOP, IDC_ACTION);
   // Owner-drawn rather than the system progress control, which cannot wear
-  // the theme — see DrawThemedProgress.
-  g.progress = Child(L"STATIC", L"", SS_OWNERDRAW, IDC_PROGRESS);
+  // the theme — see DrawThemedProgress. Without the theme there is nothing to
+  // wear, so it is the real thing, driven by PBM_SETPOS instead of a repaint.
+  if (ThemeEnabled()) {
+    g.progress = Child(L"STATIC", L"", SS_OWNERDRAW, IDC_PROGRESS);
+  } else {
+    g.progress = Child(PROGRESS_CLASSW, L"", 0, IDC_PROGRESS);
+    SendMessageW(g.progress, PBM_SETRANGE32, 0, 1000);
+  }
   ShowWindow(g.progress, SW_HIDE);
 
   // Owner-drawn for the tick box; LBS_HASSTRINGS so the control still keeps the
@@ -2025,21 +2037,22 @@ void Create() {
   // No WS_BORDER: the system's border colour is nobody's parchment, so the
   // window paints its own ink frame around the panel — see WM_PAINT.
   g.plugins = Child(L"LISTBOX", L"",
-                    LBS_NOTIFY | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | WS_VSCROLL |
-                        WS_TABSTOP,
+                    LBS_NOTIFY | ThemedStyle(LBS_OWNERDRAWFIXED) |
+                        LBS_HASSTRINGS | WS_VSCROLL | WS_TABSTOP |
+                        (ThemeEnabled() ? 0u : WS_BORDER),
                     IDC_PLUGINS);
 
   // Owner-drawn so the closed control can wear the button plaque; CBS_HASSTRINGS
   // is what keeps CB_GETLBTEXT working once the drawing is ours.
   g.variants = Child(L"COMBOBOX", L"",
-                     CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS |
-                         WS_VSCROLL | WS_TABSTOP,
+                     CBS_DROPDOWNLIST | ThemedStyle(CBS_OWNERDRAWFIXED) |
+                         CBS_HASSTRINGS | WS_VSCROLL | WS_TABSTOP,
                      IDC_VARIANTS);
-  ThemeDropdown(g.variants);
+  if (ThemeEnabled()) ThemeDropdown(g.variants);
   RegisterSlideshow();
   g.shot = CreateSlideshow(g.window, IDC_SHOT);
-  g.shot_prev = Child(L"BUTTON", L"◀", BS_OWNERDRAW | WS_TABSTOP, IDC_SHOT_PREV);
-  g.shot_next = Child(L"BUTTON", L"▶", BS_OWNERDRAW | WS_TABSTOP, IDC_SHOT_NEXT);
+  g.shot_prev = Child(L"BUTTON", L"◀", owner_button | WS_TABSTOP, IDC_SHOT_PREV);
+  g.shot_next = Child(L"BUTTON", L"▶", owner_button | WS_TABSTOP, IDC_SHOT_NEXT);
 
   // A RichEdit rather than an EDIT, for exactly one feature: EM_AUTOURLDETECT,
   // which is what makes the links an author wrote into an info.txt clickable.
@@ -2047,18 +2060,21 @@ void Create() {
   // window of an unregistered class fails silently.
   LoadLibraryW(L"Msftedit.dll");
   g.description = Child(MSFTEDIT_CLASS, L"",
-                        ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL,
+                        ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL |
+                            WS_VSCROLL | (ThemeEnabled() ? 0u : WS_BORDER),
                         IDC_DESCRIPTION);
   // Off on purpose: MarkLinks finds the URLs itself, so that the range that is
   // clickable is the range that is red. Left on, the detector re-marks them in
-  // the system blue on its own schedule and undoes the colouring.
-  SendMessageW(g.description, EM_AUTOURLDETECT, FALSE, 0);
+  // the system blue on its own schedule and undoes the colouring. Without the
+  // theme there is no red to protect, so the detector does the job instead.
+  SendMessageW(g.description, EM_AUTOURLDETECT, ThemeEnabled() ? FALSE : TRUE, 0);
   // EN_LINK arrives as WM_NOTIFY only when asked for.
   SendMessageW(g.description, EM_SETEVENTMASK, 0, ENM_LINK);
   // The author's words on the same parchment as the boxes around them.
-  SendMessageW(g.description, EM_SETBKGNDCOLOR, 0,
+  SendMessageW(g.description, EM_SETBKGNDCOLOR, ThemeEnabled() ? 0 : 1,
                static_cast<LPARAM>(ThemePanel()));
-  g.play = Child(L"BUTTON", Text(IDS_PLAY).c_str(), BS_OWNERDRAW | WS_TABSTOP, IDC_PLAY);
+  g.play = Child(L"BUTTON", Text(IDS_PLAY).c_str(), owner_button | WS_TABSTOP,
+                 IDC_PLAY);
 
   // Started now so the engine is up by the time anyone clicks a video: the
   // first run of WebView2 on a machine takes a moment, and doing it here costs
@@ -2098,7 +2114,12 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w, LPARAM l) {
       PAINTSTRUCT paint;
       HDC dc = BeginPaint(window, &paint);
       // The ink frames around the parchment panels, drawn by the window since
-      // the controls lost their system borders.
+      // the controls lost their system borders. Without the theme they keep
+      // their own borders and there is nothing for the window to draw.
+      if (!ThemeEnabled()) {
+        EndPaint(window, &paint);
+        return 0;
+      }
       HBRUSH ink = CreateSolidBrush(ThemeInk());
       for (HWND child : {g.plugins, g.description}) {
         if (!child || !IsWindowVisible(child)) continue;
@@ -2115,6 +2136,8 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w, LPARAM l) {
     case WM_CTLCOLORSTATIC: {
       // Ink on parchment for every label; the version, being secondary to the
       // sentence it ends, gets the fainter ink.
+      // System colours: let the default handler answer.
+      if (!ThemeEnabled()) return DefWindowProcW(window, message, w, l);
       HDC dc = reinterpret_cast<HDC>(w);
       SetTextColor(dc, reinterpret_cast<HWND>(l) == g.latest ? ThemeInkFaint()
                                                              : ThemeInk());
@@ -2122,6 +2145,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w, LPARAM l) {
       return reinterpret_cast<LRESULT>(ThemeBackgroundBrush());
     }
     case WM_CTLCOLORLISTBOX: {
+      if (!ThemeEnabled()) return DefWindowProcW(window, message, w, l);
       HDC dc = reinterpret_cast<HDC>(w);
       SetTextColor(dc, ThemeInk());
       SetBkColor(dc, ThemePanel());
@@ -2174,7 +2198,11 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w, LPARAM l) {
       const int permille = static_cast<int>(static_cast<intptr_t>(w));
       if (permille >= 0) {
         g.progress_permille = permille;
-        InvalidateRect(g.progress, nullptr, FALSE);
+        if (ThemeEnabled()) {
+          InvalidateRect(g.progress, nullptr, FALSE);
+        } else {
+          SendMessageW(g.progress, PBM_SETPOS, static_cast<WPARAM>(permille), 0);
+        }
       }
       std::wstring text;
       {
@@ -2327,6 +2355,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, LPWSTR command_line, int show
                                                           ICC_STANDARD_CLASSES};
   InitCommonControlsEx(&controls);
 
+  // Settled before anything is built: owner-draw is a creation-time style, so
+  // the answer has to be known before the class is registered and the controls
+  // are made. This is why the switch in Settings takes effect on the next run.
+  SetThemeEnabled(ThemeWanted());
   // Before the class is registered: the class background brush is the theme's.
   CreateTheme();
 

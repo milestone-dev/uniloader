@@ -23,6 +23,12 @@ bool IsGameFolder(const std::wstring& folder);
 std::wstring RememberedGameFolder();
 void RememberGameFolder(const std::wstring& folder);
 
+/// Whether the Warcraft theme is wanted. On unless it was deliberately turned
+/// off, so a first run is themed and an absent or unreadable value cannot lose
+/// the look. Kept beside the game folder, under HKCU\Software\UniLoader.
+bool ThemeWanted();
+void RememberThemeWanted(bool wanted);
+
 /// A folder-picking dialog. Empty when the user cancelled.
 std::wstring AskForGameFolder(HWND owner);
 

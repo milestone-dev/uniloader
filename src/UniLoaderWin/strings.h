@@ -40,6 +40,8 @@
 
 // 290-299 is full, 298 retired, so the next block starts here.
 #define IDS_PROJECT_PAGE         300
+#define IDS_USE_THEME            301
+#define IDS_THEME_RESTART        302
 
 #define IDS_ACTION_INSTALL       220
 #define IDS_ACTION_UPDATE        221
