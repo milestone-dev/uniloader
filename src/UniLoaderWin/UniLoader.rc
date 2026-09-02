@@ -8,10 +8,7 @@
 #include "resource.h"
 #include "version.h"
 
-// The custom icon is off until there is one worth shipping: with no ICON
-// resource the exe shows Windows' stock application icon everywhere, which is
-// honest about the state of the art. Put this line back to turn it on:
-// IDI_APP ICON "app.ico"
+IDI_APP ICON "app.ico"
 
 // Embedded as resource 1 rather than left to the linker: it is the only way
 // MinGW can do it, and MSVC is told not to generate a second (see

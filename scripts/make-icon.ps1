@@ -5,41 +5,62 @@
 # because this needs PowerShell and System.Drawing and so cannot run on a
 # cross-build; where there is no PowerShell the checked-in file is used as it is.
 #
-# Every standard size is written, each resampled from the one source with high
-# quality: an .ico holding only 256x256 is scaled by the shell for the taskbar
-# and the result is mush at 16x16, which is where most people will see it.
+# The source is a sheet of two hand-drawn sizes side by side: the 32x32 at
+# (0,0) and the 16x16 at (32,0). Each ships as drawn — pixel art resampled
+# "with quality" is pixel art blurred — and the larger entries are the 32
+# scaled up by nearest neighbour, which keeps every pixel a crisp square.
 
 param(
   [Parameter(Mandatory = $true)][string]$Sheet,
   [Parameter(Mandatory = $true)][string]$Out
 )
 
+# Fail fast: a half-run must not leave a truncated .ico behind looking valid.
+$ErrorActionPreference = "Stop"
+
 Add-Type -AssemblyName System.Drawing
 
-$source = [System.Drawing.Image]::FromFile((Resolve-Path $Sheet))
-$sizes = @(256, 128, 64, 48, 32, 24, 16)
+$source = New-Object System.Drawing.Bitmap((Resolve-Path $Sheet).Path)
+$art32 = $source.Clone((New-Object System.Drawing.Rectangle(0, 0, 32, 32)),
+  [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+$art16 = $source.Clone((New-Object System.Drawing.Rectangle(32, 0, 16, 16)),
+  [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+$source.Dispose()
 
-$images = @()
-foreach ($size in $sizes) {
+function Scaled([System.Drawing.Bitmap]$art, [int]$size) {
   $bitmap = New-Object System.Drawing.Bitmap($size, $size,
     [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
   $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
   $graphics.InterpolationMode =
-    [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
-  $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+    [System.Drawing.Drawing2D.InterpolationMode]::NearestNeighbor
+  $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::Half
   $graphics.Clear([System.Drawing.Color]::Transparent)
-  $graphics.DrawImage($source, 0, 0, $size, $size)
+  $graphics.DrawImage($art, 0, 0, $size, $size)
   $graphics.Dispose()
+  return $bitmap
+}
 
+# The hand-drawn sizes as drawn; everything else scaled from the nearest one.
+$entries = @(
+  @(256, (Scaled $art32 256)),
+  @(128, (Scaled $art32 128)),
+  @(64,  (Scaled $art32 64)),
+  @(48,  (Scaled $art32 48)),
+  @(32,  $art32),
+  @(24,  (Scaled $art16 24)),
+  @(16,  $art16)
+)
+
+$images = @()
+foreach ($entry in $entries) {
   # Each entry is a PNG, which every Windows since Vista reads inside an .ico
   # and which keeps the alpha channel without a mask.
   $stream = New-Object System.IO.MemoryStream
-  $bitmap.Save($stream, [System.Drawing.Imaging.ImageFormat]::Png)
-  $images += ,@($size, $stream.ToArray())
-  $bitmap.Dispose()
+  $entry[1].Save($stream, [System.Drawing.Imaging.ImageFormat]::Png)
+  $images += ,@($entry[0], $stream.ToArray())
+  $entry[1].Dispose()
   $stream.Dispose()
 }
-$source.Dispose()
 
 $file = [System.IO.File]::Create($Out)
 $writer = New-Object System.IO.BinaryWriter($file)

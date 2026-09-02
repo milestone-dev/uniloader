@@ -2254,8 +2254,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, LPWSTR command_line, int show
   definition.cbSize = sizeof(definition);
   definition.lpfnWndProc = WindowProc;
   definition.hInstance = instance;
-  // The stock application icon while the custom one is off — see UniLoader.rc.
-  definition.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
+  definition.hIcon = LoadIconW(instance, MAKEINTRESOURCEW(IDI_APP));
   definition.hIconSm = definition.hIcon;
   definition.hCursor = LoadCursorW(nullptr, IDC_ARROW);
   definition.hbrBackground = ThemeBackgroundBrush();

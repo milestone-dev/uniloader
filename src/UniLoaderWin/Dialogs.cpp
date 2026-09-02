@@ -228,8 +228,7 @@ void Register() {
   definition.hCursor = LoadCursorW(nullptr, IDC_ARROW);
   // The same parchment the main window stands on.
   definition.hbrBackground = ThemeBackgroundBrush();
-  // The stock application icon while the custom one is off — see UniLoader.rc.
-  definition.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
+  definition.hIcon = LoadIconW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDI_APP));
   definition.lpszClassName = kClassName;
   RegisterClassExW(&definition);
   done = true;
