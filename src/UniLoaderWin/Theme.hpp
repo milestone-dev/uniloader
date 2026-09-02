@@ -36,7 +36,16 @@ HFONT ThemePlayFont();
 
 /// Paints one owner-drawn button in the menu style: black frame, metal bevel,
 /// maroon fill, gold text — pressed sinks it, focus outlines it in gold, and
-/// disabled dims the lettering. `large` is Play.
+/// disabled dims the lettering. `large` is Play. An artist's nine-sliced
+/// plaque (btn.png, embedded; art\button.9.png beside the exe overrides)
+/// replaces the painting when present.
 void DrawThemedButton(const DRAWITEMSTRUCT* item, bool large);
+
+/// Paints a checkbox in the game's preferences style: a small pane with a red
+/// cross when checked, the label beside it in ink. Drawn over the whole
+/// control through NM_CUSTOMDRAW, so the control keeps its own check state.
+/// art\check.png and art\check-on.png beside the exe replace the pane.
+void DrawThemedCheckbox(HDC dc, const RECT& box, const wchar_t* label,
+                        bool checked, HFONT font);
 
 }  // namespace ulwin

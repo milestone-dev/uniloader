@@ -3,6 +3,11 @@
 What changed in each release, in the words a user would use. This file is what
 the GitHub release notes are made of.
 
+## 1.0.6
+
+- The buttons wear hand-drawn plaques and the game's own style of lettering,
+  and the Settings window matches the rest — down to the red-cross checkbox.
+
 ## 1.0.5
 
 - The boxes around the plugin list and the description match the theme too.

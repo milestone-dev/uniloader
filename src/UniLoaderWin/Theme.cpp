@@ -1,5 +1,7 @@
 #include "Theme.hpp"
 
+#include "resource.h"
+
 #include <objidl.h>   // before gdiplus.h, which needs IStream declared
 
 #include <gdiplus.h>
@@ -25,11 +27,13 @@ constexpr COLORREF kFrame = RGB(12, 10, 8);
 constexpr COLORREF kBevelLight = RGB(190, 188, 182);
 constexpr COLORREF kBevelDark = RGB(70, 68, 64);
 
-/// A nine-slice image in the Android 9-patch format: the outer one-pixel
-/// border is guides, black runs on the top and left edges marking the zones
-/// that stretch. Corners stay pixel-true at any button size.
+/// A nine-slice image. Two forms are read: the Android 9-patch, whose outer
+/// one-pixel border is guides (black runs on the top and left edges marking
+/// the zones that stretch), and a plain plaque with no guides, whose middle
+/// third each way stretches. Corners stay pixel-true at any button size.
 struct NinePatch {
-  std::unique_ptr<Gdiplus::Bitmap> image;   // guides included; drawn around
+  std::unique_ptr<Gdiplus::Bitmap> image;
+  int border = 0;   // 1 when a guide border must be skipped, 0 for a plaque
   int left = 0, top = 0, right = 0, bottom = 0;   // fixed margins, in pixels
   bool ok = false;
 };
@@ -42,6 +46,8 @@ struct Theme {
   HFONT play_font = nullptr;
   NinePatch button;           // art/button.9.png, when the artist has drawn one
   NinePatch button_pressed;   // art/button-pressed.9.png, else button darkened
+  std::unique_ptr<Gdiplus::Bitmap> check;      // art/check.png, drawn 1:1-ish
+  std::unique_ptr<Gdiplus::Bitmap> check_on;   // art/check-on.png
 };
 
 Theme g_theme;
@@ -54,16 +60,15 @@ bool IsGuide(Gdiplus::Bitmap* image, int x, int y) {
          colour.GetB() < 64;
 }
 
-NinePatch LoadNinePatch(const std::wstring& path) {
+NinePatch MakePatch(std::unique_ptr<Gdiplus::Bitmap> image) {
   NinePatch patch;
-  auto image = std::make_unique<Gdiplus::Bitmap>(path.c_str());
-  if (image->GetLastStatus() != Gdiplus::Ok) return patch;
+  if (!image || image->GetLastStatus() != Gdiplus::Ok) return patch;
   const int width = static_cast<int>(image->GetWidth());
   const int height = static_cast<int>(image->GetHeight());
   if (width < 4 || height < 4) return patch;
 
-  // The stretch zones are the black runs on the guide row and column; what is
-  // before and after them are the fixed margins.
+  // With guides, the stretch zones are the black runs on the guide row and
+  // column, and what is before and after them are the fixed margins.
   int first_x = 0, last_x = 0, first_y = 0, last_y = 0;
   for (int x = 1; x < width - 1; ++x) {
     if (!IsGuide(image.get(), x, 0)) continue;
@@ -75,24 +80,75 @@ NinePatch LoadNinePatch(const std::wstring& path) {
     if (!first_y) first_y = y;
     last_y = y;
   }
-  // No guides means it is not a 9-patch; a third each way is the safe reading.
-  patch.left = first_x ? first_x - 1 : (width - 2) / 3;
-  patch.right = first_x ? (width - 2) - last_x : (width - 2) / 3;
-  patch.top = first_y ? first_y - 1 : (height - 2) / 3;
-  patch.bottom = first_y ? (height - 2) - last_y : (height - 2) / 3;
+  if (first_x && first_y) {
+    patch.border = 1;
+    patch.left = first_x - 1;
+    patch.right = (width - 2) - last_x;
+    patch.top = first_y - 1;
+    patch.bottom = (height - 2) - last_y;
+  } else {
+    // A plain plaque: every pixel is art, and the middle third each way is
+    // what stretches — generous enough to keep any bevelled border intact.
+    patch.border = 0;
+    patch.left = width / 3;
+    patch.right = width / 3;
+    patch.top = height / 3;
+    patch.bottom = height / 3;
+  }
   patch.image = std::move(image);
   patch.ok = true;
   return patch;
 }
 
+NinePatch LoadNinePatch(const std::wstring& path) {
+  return MakePatch(std::make_unique<Gdiplus::Bitmap>(path.c_str()));
+}
+
+/// The same, out of an RCDATA resource — how the shipped one-file exe carries
+/// the art. The pixels are copied off the stream so nothing has to outlive it.
+NinePatch LoadNinePatchResource(int id) {
+  NinePatch patch;
+  HRSRC found = FindResourceW(nullptr, MAKEINTRESOURCEW(id), RT_RCDATA);
+  if (!found) return patch;
+  HGLOBAL handle = LoadResource(nullptr, found);
+  if (!handle) return patch;
+  const DWORD size = SizeofResource(nullptr, found);
+  const void* bytes = LockResource(handle);
+  if (!bytes || !size) return patch;
+
+  HGLOBAL copy = GlobalAlloc(GMEM_MOVEABLE, size);
+  if (!copy) return patch;
+  memcpy(GlobalLock(copy), bytes, size);
+  GlobalUnlock(copy);
+  IStream* stream = nullptr;
+  if (CreateStreamOnHGlobal(copy, TRUE, &stream) != S_OK) {
+    GlobalFree(copy);
+    return patch;
+  }
+  auto loaded = std::make_unique<Gdiplus::Bitmap>(stream);
+  // Cloned into pixels of its own: a Bitmap made from a stream reads from it
+  // lazily, and the stream is about to be released.
+  std::unique_ptr<Gdiplus::Bitmap> owned;
+  if (loaded->GetLastStatus() == Gdiplus::Ok) {
+    owned.reset(loaded->Clone(0, 0, loaded->GetWidth(), loaded->GetHeight(),
+                              PixelFormat32bppARGB));
+  }
+  stream->Release();
+  return MakePatch(std::move(owned));
+}
+
 /// Draws the patch over `box`: corners as they are, edges and middle
-/// stretched. Source coordinates skip the one-pixel guide border.
+/// stretched. Source coordinates skip the guide border when there is one.
 void DrawNinePatch(HDC dc, const RECT& box, const NinePatch& patch) {
   Gdiplus::Graphics graphics(dc);
-  graphics.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBilinear);
+  // Nearest neighbour: the art is pixel art, and a bilinear stretch smears
+  // its bevels into gradients. Half-pixel offset keeps the slices seamless.
+  graphics.SetInterpolationMode(Gdiplus::InterpolationModeNearestNeighbor);
   graphics.SetPixelOffsetMode(Gdiplus::PixelOffsetModeHalf);
-  const int source_width = static_cast<int>(patch.image->GetWidth()) - 2;
-  const int source_height = static_cast<int>(patch.image->GetHeight()) - 2;
+  const int source_width =
+      static_cast<int>(patch.image->GetWidth()) - 2 * patch.border;
+  const int source_height =
+      static_cast<int>(patch.image->GetHeight()) - 2 * patch.border;
   const int width = box.right - box.left;
   const int height = box.bottom - box.top;
 
@@ -109,8 +165,8 @@ void DrawNinePatch(HDC dc, const RECT& box, const NinePatch& patch) {
       const int dh = dy[row + 1] - dy[row];
       if (sw <= 0 || sh <= 0 || dw <= 0 || dh <= 0) continue;
       const Gdiplus::Rect destination(box.left + dx[column], box.top + dy[row], dw, dh);
-      graphics.DrawImage(patch.image.get(), destination, 1 + sx[column], 1 + sy[row],
-                         sw, sh, Gdiplus::UnitPixel);
+      graphics.DrawImage(patch.image.get(), destination, patch.border + sx[column],
+                         patch.border + sy[row], sw, sh, Gdiplus::UnitPixel);
     }
   }
 }
@@ -176,16 +232,29 @@ HBITMAP MakeParchment(int size) {
   return bitmap;
 }
 
-HFONT MakeSerif(int height, int weight) {
-  // Palatino Linotype ships with every Windows this runs on and is the
-  // closest stock face to the game's lettering; the fallbacks keep the shape
-  // serif if a stripped install lacks it.
+/// Registers the lettering face embedded in the exe for this process only —
+/// nothing is installed on the machine. True when "Folkard" is usable.
+bool LoadFolkard() {
+  HRSRC found = FindResourceW(nullptr, MAKEINTRESOURCEW(IDR_FONT), RT_RCDATA);
+  if (!found) return false;
+  HGLOBAL handle = LoadResource(nullptr, found);
+  if (!handle) return false;
+  const DWORD size = SizeofResource(nullptr, found);
+  void* bytes = LockResource(handle);
+  if (!bytes || !size) return false;
+  DWORD installed = 0;
+  return AddFontMemResourceEx(bytes, size, nullptr, &installed) != nullptr;
+}
+
+HFONT MakeSerif(int height, int weight, bool folkard) {
+  // Folkard is the game's own style of lettering, carried in the exe. When it
+  // failed to register, Palatino Linotype is the closest stock face.
   LOGFONTW definition = {};
   definition.lfHeight = -height;
-  definition.lfWeight = weight;
+  definition.lfWeight = folkard ? FW_NORMAL : weight;
   definition.lfCharSet = DEFAULT_CHARSET;
   definition.lfQuality = CLEARTYPE_QUALITY;
-  wcscpy_s(definition.lfFaceName, L"Palatino Linotype");
+  wcscpy_s(definition.lfFaceName, folkard ? L"Folkard" : L"Palatino Linotype");
   HFONT font = CreateFontIndirectW(&definition);
   if (!font) {
     wcscpy_s(definition.lfFaceName, L"Georgia");
@@ -211,12 +280,26 @@ void CreateTheme() {
   g_theme.background = g_theme.parchment ? CreatePatternBrush(g_theme.parchment)
                                          : CreateSolidBrush(kParchment);
   g_theme.panel = CreateSolidBrush(kPanel);
-  g_theme.button_font = MakeSerif(16, FW_BOLD);
-  g_theme.play_font = MakeSerif(22, FW_BOLD);
-  // The artist's buttons, when drawn. Absent files are simply the painted
-  // style below; a pressed variant is optional on top of that.
+  const bool folkard = LoadFolkard();
+  g_theme.button_font = MakeSerif(folkard ? 18 : 16, FW_BOLD, folkard);
+  g_theme.play_font = MakeSerif(folkard ? 28 : 22, FW_BOLD, folkard);
+  // The artist's buttons: a file beside the exe wins, for redrawing without a
+  // rebuild, and the copy embedded in the exe is what ships. With neither,
+  // the painted style below stands in.
   g_theme.button = LoadNinePatch(ArtPath(L"button.9.png"));
+  if (!g_theme.button.ok) g_theme.button = LoadNinePatchResource(IDR_BTN);
   g_theme.button_pressed = LoadNinePatch(ArtPath(L"button-pressed.9.png"));
+  if (!g_theme.button_pressed.ok) {
+    g_theme.button_pressed = LoadNinePatchResource(IDR_BTN_PRESSED);
+  }
+  // Checkbox panes, once the artist draws them; the painted style stands in.
+  auto plain = [](const std::wstring& path) -> std::unique_ptr<Gdiplus::Bitmap> {
+    auto image = std::make_unique<Gdiplus::Bitmap>(path.c_str());
+    if (image->GetLastStatus() != Gdiplus::Ok || image->GetWidth() == 0) return {};
+    return image;
+  };
+  g_theme.check = plain(ArtPath(L"check.png"));
+  g_theme.check_on = plain(ArtPath(L"check-on.png"));
 }
 
 void DestroyTheme() {
@@ -305,6 +388,49 @@ void DrawThemedButton(const DRAWITEMSTRUCT* item, bool large) {
   SetTextColor(dc, disabled ? kGoldDim : kGold);
   DrawTextW(dc, text, -1, &label,
             DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+  SelectObject(dc, previous);
+}
+
+void DrawThemedCheckbox(HDC dc, const RECT& box, const wchar_t* label,
+                        bool checked, HFONT font) {
+  const int size = 16;
+  const int top = box.top + ((box.bottom - box.top) - size) / 2;
+  const RECT square = {box.left, top, box.left + size, top + size};
+
+  Gdiplus::Bitmap* art =
+      checked ? g_theme.check_on.get() : g_theme.check.get();
+  if (art) {
+    Gdiplus::Graphics graphics(dc);
+    graphics.SetInterpolationMode(Gdiplus::InterpolationModeNearestNeighbor);
+    graphics.DrawImage(art, Gdiplus::Rect(square.left, square.top, size, size));
+  } else {
+    // The painted stand-in: a parchment pane in an ink frame, and the game's
+    // red cross when it is on.
+    HBRUSH pane = CreateSolidBrush(kPanel);
+    FillRect(dc, &square, pane);
+    DeleteObject(pane);
+    HBRUSH frame = CreateSolidBrush(kFrame);
+    FrameRect(dc, &square, frame);
+    DeleteObject(frame);
+    if (checked) {
+      HPEN pen = CreatePen(PS_SOLID, 2, RGB(198, 30, 20));
+      HGDIOBJ previous = SelectObject(dc, pen);
+      MoveToEx(dc, square.left + 3, square.top + 3, nullptr);
+      LineTo(dc, square.right - 3, square.bottom - 3);
+      MoveToEx(dc, square.right - 4, square.top + 3, nullptr);
+      LineTo(dc, square.left + 2, square.bottom - 4);
+      SelectObject(dc, previous);
+      DeleteObject(pen);
+    }
+  }
+
+  SetBkMode(dc, TRANSPARENT);
+  SetTextColor(dc, kInk);
+  HGDIOBJ previous = SelectObject(dc, font);
+  RECT text = box;
+  text.left = square.right + 8;
+  DrawTextW(dc, label, -1, &text,
+            DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
   SelectObject(dc, previous);
 }
 

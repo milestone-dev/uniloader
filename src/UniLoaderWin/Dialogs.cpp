@@ -1,6 +1,9 @@
 #include "Dialogs.hpp"
 
+#include <commctrl.h>   // NM_CUSTOMDRAW, for the themed checkbox
+
 #include "Strings.hpp"
+#include "Theme.hpp"
 #include "resource.h"
 #include "strings.h"
 #include "version.h"
@@ -148,6 +151,45 @@ LRESULT CALLBACK Proc(HWND window, UINT message, WPARAM w, LPARAM l) {
           return 0;
         default: return 0;
       }
+    case WM_DRAWITEM: {
+      const auto* item = reinterpret_cast<const DRAWITEMSTRUCT*>(l);
+      if (item && item->CtlType == ODT_BUTTON) DrawThemedButton(item, false);
+      return TRUE;
+    }
+    case WM_CTLCOLORSTATIC: {
+      // Ink on parchment for the labels; the changelog's read-only body gets
+      // the panel colour, the way the main window's description does.
+      HDC dc = reinterpret_cast<HDC>(w);
+      SetTextColor(dc, ThemeInk());
+      if (GetDlgCtrlID(reinterpret_cast<HWND>(l)) == IDC_DLG_TEXT) {
+        SetBkColor(dc, ThemePanel());
+        return reinterpret_cast<LRESULT>(ThemePanelBrush());
+      }
+      SetBkMode(dc, TRANSPARENT);
+      return reinterpret_cast<LRESULT>(ThemeBackgroundBrush());
+    }
+    case WM_NOTIFY: {
+      // The one checkbox, custom-drawn in the game's preferences style. The
+      // control still owns its check state — this only paints it.
+      const auto* header = reinterpret_cast<const NMHDR*>(l);
+      if (header && header->idFrom == IDC_DLG_ASPECT &&
+          header->code == NM_CUSTOMDRAW) {
+        auto* draw = reinterpret_cast<NMCUSTOMDRAW*>(l);
+        if (draw->dwDrawStage == CDDS_PREERASE ||
+            draw->dwDrawStage == CDDS_PREPAINT) {
+          FillRect(draw->hdc, &draw->rc, ThemeBackgroundBrush());
+          wchar_t label[256] = {};
+          GetWindowTextW(header->hwndFrom, label, 256);
+          const bool checked =
+              SendMessageW(header->hwndFrom, BM_GETCHECK, 0, 0) == BST_CHECKED;
+          Modal* modal = Of(window);
+          DrawThemedCheckbox(draw->hdc, draw->rc, label, checked,
+                             modal ? modal->font : nullptr);
+          return CDRF_SKIPDEFAULT;
+        }
+      }
+      return DefWindowProcW(window, message, w, l);
+    }
     case WM_CLOSE:
       Finish(window, DialogAction::None);
       return 0;
@@ -184,7 +226,8 @@ void Register() {
   definition.lpfnWndProc = Proc;
   definition.hInstance = GetModuleHandleW(nullptr);
   definition.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-  definition.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
+  // The same parchment the main window stands on.
+  definition.hbrBackground = ThemeBackgroundBrush();
   // The stock application icon while the custom one is off — see UniLoader.rc.
   definition.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
   definition.lpszClassName = kClassName;
@@ -301,7 +344,7 @@ void ShowChangelog(HWND owner, const ul_release* release) {
         ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL | WS_BORDER |
             WS_TABSTOP,
         IDC_DLG_TEXT, modal.font);
-  Child(window, L"BUTTON", Text(IDS_CLOSE), BS_DEFPUSHBUTTON | WS_TABSTOP,
+  Child(window, L"BUTTON", Text(IDS_CLOSE), BS_OWNERDRAW | WS_TABSTOP,
         IDC_DLG_CLOSE, modal.font);
 
   CentreOn(owner, window, 640, 560);
@@ -345,7 +388,7 @@ DialogAction ShowSettings(HWND owner, const std::wstring& game_folder,
         modal.font);
   Child(window, L"STATIC", game_folder.empty() ? Text(IDS_ERR_NO_GAME) : game_folder,
         SS_LEFT | SS_PATHELLIPSIS, IDC_DLG_FOLDER_PATH, modal.font);
-  Child(window, L"BUTTON", Text(IDS_CHANGE_FOLDER), BS_PUSHBUTTON | WS_TABSTOP,
+  Child(window, L"BUTTON", Text(IDS_CHANGE_FOLDER), BS_OWNERDRAW | WS_TABSTOP,
         IDC_DLG_CHANGE_FOLDER, modal.font);
 
   Child(window, L"STATIC", Text(IDS_SETTINGS_STORE), SS_LEFT, IDC_DLG_STORE, modal.font);
@@ -357,7 +400,7 @@ DialogAction ShowSettings(HWND owner, const std::wstring& game_folder,
           ? Text(IDS_SETTINGS_NOTHING)
           : Format(IDS_SETTINGS_INSTALLED, installed_version.c_str());
   HWND remove = Child(window, L"BUTTON", Text(IDS_UNINSTALL) + L"…",
-                      BS_PUSHBUTTON | WS_TABSTOP, IDC_DLG_UNINSTALL, modal.font);
+                      BS_OWNERDRAW | WS_TABSTOP, IDC_DLG_UNINSTALL, modal.font);
   // Nothing installed, or something already running: there is nothing to undo,
   // and a button that would start a second job while the first is going is a
   // button that should not be pressable.
@@ -421,11 +464,11 @@ DialogAction ShowSettings(HWND owner, const std::wstring& game_folder,
   if (!cache_size.empty()) {
     Child(window, L"STATIC", Text(IDS_SETTINGS_CACHE), SS_LEFT, IDC_DLG_CACHE, modal.font);
     HWND clear = Child(window, L"BUTTON", Format(IDS_CLEAR_CACHE, cache_size.c_str()),
-                       BS_PUSHBUTTON | WS_TABSTOP, IDC_DLG_CLEAR_CACHE, modal.font);
+                       BS_OWNERDRAW | WS_TABSTOP, IDC_DLG_CLEAR_CACHE, modal.font);
     EnableWindow(clear, busy ? FALSE : TRUE);
   }
 
-  Child(window, L"BUTTON", Text(IDS_CLOSE), BS_DEFPUSHBUTTON | WS_TABSTOP,
+  Child(window, L"BUTTON", Text(IDS_CLOSE), BS_OWNERDRAW | WS_TABSTOP,
         IDC_DLG_CLOSE, modal.font);
 
   CentreOn(owner, window, 560, cache_size.empty() ? 496 : 552);

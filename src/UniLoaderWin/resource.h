@@ -8,6 +8,9 @@
 
 #define IDI_APP                 1
 #define IDR_MANIFEST            1
+#define IDR_BTN                 2   // the button plaque, nine-sliced
+#define IDR_BTN_PRESSED         3   // and its pressed state
+#define IDR_FONT                4   // Folkard, the lettering face
 
 // --------------------------------------------------------------- the window
 

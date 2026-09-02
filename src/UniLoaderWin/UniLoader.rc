@@ -18,6 +18,12 @@
 // /MANIFEST:NO in CMakeLists.txt) because it refuses to merge two.
 IDR_MANIFEST RT_MANIFEST "UniLoader.manifest"
 
+// The button art, nine-sliced at draw time — see Theme.cpp. A file in an
+// art\ folder beside the exe overrides these for redrawing without a rebuild.
+IDR_BTN         RCDATA "btn.png"
+IDR_BTN_PRESSED RCDATA "btn_pressed.png"
+IDR_FONT        RCDATA "folkard.ttf"
+
 VS_VERSION_INFO VERSIONINFO
   FILEVERSION    UL_APP_VERSION_MAJOR, UL_APP_VERSION_MINOR, UL_APP_VERSION_PATCH, 0
   PRODUCTVERSION UL_APP_VERSION_MAJOR, UL_APP_VERSION_MINOR, UL_APP_VERSION_PATCH, 0
