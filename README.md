@@ -1,5 +1,7 @@
 # Unification Mod Loader
 
+**[⬇ Download the latest release](https://github.com/milestone-dev/uniloader/releases/latest)**
+
 Unification Mod Loader — *UniLoader* for short, and that is the name the code
 uses — is a Windows program for [dannyldd's War2 Unification
 mod](https://gamebanana.com/mods/644456): it installs the mod into a
