@@ -3,6 +3,10 @@
 What changed in each release, in the words a user would use. This file is what
 the GitHub release notes are made of.
 
+## 1.0.10
+
+- Buttons repeat their artwork instead of stretching it.
+
 ## 1.0.9
 
 - The program has its own hand-drawn icon.

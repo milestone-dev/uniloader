@@ -90,13 +90,15 @@ NinePatch MakePatch(std::unique_ptr<Gdiplus::Bitmap> image) {
     patch.top = first_y - 1;
     patch.bottom = (height - 2) - last_y;
   } else {
-    // A plain plaque: every pixel is art, and the middle third each way is
-    // what stretches — generous enough to keep any bevelled border intact.
+    // A plain plaque: four pixels from each corner are fixed, and everything
+    // between repeats — the artist's contract. Tiny art falls back to thirds
+    // so there is always a middle to repeat.
     patch.border = 0;
-    patch.left = width / 3;
-    patch.right = width / 3;
-    patch.top = height / 3;
-    patch.bottom = height / 3;
+    const int inset = (width > 9 && height > 9) ? 4 : (width < height ? width : height) / 3;
+    patch.left = inset;
+    patch.right = inset;
+    patch.top = inset;
+    patch.bottom = inset;
   }
   patch.image = std::move(image);
   patch.ok = true;
@@ -143,12 +145,12 @@ NinePatch LoadNinePatchResource(int id) {
   return MakePatch(LoadBitmapResource(id));
 }
 
-/// Draws the patch over `box`: corners as they are, edges and middle
-/// stretched. Source coordinates skip the guide border when there is one.
+/// Draws the patch over `box`: the corner slices land 1:1, and everything
+/// between them *repeats* at its drawn size — tiled, never stretched, which
+/// is what keeps a textured middle looking like the artist's pixels at any
+/// button size. Source coordinates skip the guide border when there is one.
 void DrawNinePatch(HDC dc, const RECT& box, const NinePatch& patch) {
   Gdiplus::Graphics graphics(dc);
-  // Nearest neighbour: the art is pixel art, and a bilinear stretch smears
-  // its bevels into gradients. Half-pixel offset keeps the slices seamless.
   graphics.SetInterpolationMode(Gdiplus::InterpolationModeNearestNeighbor);
   graphics.SetPixelOffsetMode(Gdiplus::PixelOffsetModeHalf);
   const int source_width =
@@ -170,9 +172,19 @@ void DrawNinePatch(HDC dc, const RECT& box, const NinePatch& patch) {
       const int dw = dx[column + 1] - dx[column];
       const int dh = dy[row + 1] - dy[row];
       if (sw <= 0 || sh <= 0 || dw <= 0 || dh <= 0) continue;
-      const Gdiplus::Rect destination(box.left + dx[column], box.top + dy[row], dw, dh);
-      graphics.DrawImage(patch.image.get(), destination, patch.border + sx[column],
-                         patch.border + sy[row], sw, sh, Gdiplus::UnitPixel);
+      // Clip to the region and lay the source block down repeatedly at its
+      // own size. A corner's region equals its block, so it lands exactly
+      // once; edges repeat along their axis, the middle in both.
+      graphics.SetClip(Gdiplus::Rect(box.left + dx[column], box.top + dy[row], dw, dh));
+      for (int ty = box.top + dy[row]; ty < box.top + dy[row] + dh; ty += sh) {
+        for (int tx = box.left + dx[column]; tx < box.left + dx[column] + dw;
+             tx += sw) {
+          graphics.DrawImage(patch.image.get(), Gdiplus::Rect(tx, ty, sw, sh),
+                             patch.border + sx[column], patch.border + sy[row], sw,
+                             sh, Gdiplus::UnitPixel);
+        }
+      }
+      graphics.ResetClip();
     }
   }
 }

@@ -19,10 +19,10 @@
 
 #define UL_APP_VERSION_MAJOR 1
 #define UL_APP_VERSION_MINOR 0
-#define UL_APP_VERSION_PATCH 9
+#define UL_APP_VERSION_PATCH 10
 
 // Spelled out rather than stringised from the three numbers above: rc.exe's
 // preprocessor does not do the two-level stringisation that would build it, and
 // a VALUE expanding to something other than a string literal is a syntax error.
-#define UL_APP_VERSION_STR "1.0.9"
-#define UL_APP_VERSION_WSTR L"1.0.9"
+#define UL_APP_VERSION_STR "1.0.10"
+#define UL_APP_VERSION_WSTR L"1.0.10"
