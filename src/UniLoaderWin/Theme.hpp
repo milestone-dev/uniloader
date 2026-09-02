@@ -29,6 +29,7 @@ COLORREF ThemeInkFaint();   // the version label and other second voices
 COLORREF ThemePanel();      // the solid colour behind ThemePanelBrush
 COLORREF ThemeMaroon();     // the buttons, and the list's selection
 COLORREF ThemeGold();       // lettering on maroon
+COLORREF ThemeLink();       // the art's red, for links in the description
 
 /// The serif faces the buttons letter in. The large one is Play's.
 HFONT ThemeButtonFont();
@@ -41,8 +42,21 @@ HFONT ThemePlayFont();
 /// replaces the painting when present.
 void DrawThemedButton(const DRAWITEMSTRUCT* item, bool large);
 
-/// Paints the download bar: a parchment trough, and the artist's repeating
-/// unit tiled to `permille` of the width.
+/// Paints the button plaque into `box` for controls that are not buttons —
+/// the same nine-patch, so a dropdown sits in the same set as the buttons.
+void DrawThemedPlaque(HDC dc, const RECT& box, bool pressed);
+
+/// Paints one owner-drawn combo: the closed control wears the plaque with gold
+/// lettering, and a row of the open list is parchment, maroon when picked.
+/// Needs CBS_OWNERDRAWFIXED | CBS_HASSTRINGS on the control.
+void DrawThemedCombo(const DRAWITEMSTRUCT* item);
+
+/// Subclasses a combo so its drop button wears the plaque too. Owner-draw does
+/// not reach that button, so it is painted over after the control paints.
+void ThemeDropdown(HWND combo);
+
+/// Paints the download bar: a dark well in an ink frame, filled flat red to
+/// `permille` of the width.
 void DrawThemedProgress(HDC dc, const RECT& box, int permille);
 
 /// Paints a checkbox in the game's preferences style: a small pane with a red

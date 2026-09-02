@@ -114,6 +114,28 @@ machines this program exists for. Nothing else in the core opens a file.
 - **The gallery panel and the player share a rectangle.** Only one is shown at a
   time, by hiding the panel — z-order is not enough, because every layout pass
   moves the panel and a `MoveWindow` may raise it over a playing video.
+- **A nine-patch guide border is pure black on nothing, not "dark".** The
+  button plaque's hand-drawn outer ring is `2C1A00`, which an `R,G,B < 64` test
+  read as Android 9-patch guide marks: `border` became 1, the margins came out
+  as nonsense, and the buttons lost their frame and sat a pixel off — while
+  still looking like a plausible button. A real `.9.png` border row is
+  transparent apart from the marks, so that is what `HasGuideBorder` checks.
+  The symptom looked like a stretching bug and is not one; before touching
+  `DrawNinePatch`, dump a drawn button's corner and compare it to `ui.png`,
+  where a correct patch matches pixel for pixel.
+- **Buttons are drawn as a true nine-patch: nothing is ever scaled.** Corners
+  land once at their drawn size, edges repeat along the one axis they are the
+  middle of, the centre repeats both ways, and a piece running past its cell is
+  cut by the clip. Scaling any of it — even proportionally — is the thing that
+  was asked for and rejected.
+- **`UniLoaderTest.exe` re-executes as `Unification Mod Loader.exe`**, so the
+  process you started exits with code 0 and its `MainWindowHandle` is useless.
+  Find the window by enumerating top-level windows of *any* process running out
+  of the build folder. It also means the test copy still locks the real exe, so
+  a leftover instance is an `LNK1104` on the next build.
+- **A screen grab catches whatever is on top.** `CopyFromScreen` over the
+  window rect returned a picture of the terminal sitting over the app. Bring
+  the window to the front and let it settle before capturing.
 - **Backslashes do not survive a heredoc through the Bash tool.** `L'\\'` has
   arrived in a file as `L'\'` more than once. Write C++ with the file tools.
 

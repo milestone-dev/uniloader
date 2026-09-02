@@ -3,6 +3,10 @@
 What changed in each release, in the words a user would use. This file is what
 the GitHub release notes are made of.
 
+## 1.0.12
+
+- Add theme.
+
 ## 1.0.11
 
 - Button artwork keeps its corners crisp and fills the rest smoothly.

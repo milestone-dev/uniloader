@@ -153,8 +153,20 @@ LRESULT CALLBACK Proc(HWND window, UINT message, WPARAM w, LPARAM l) {
       }
     case WM_DRAWITEM: {
       const auto* item = reinterpret_cast<const DRAWITEMSTRUCT*>(l);
-      if (item && item->CtlType == ODT_BUTTON) DrawThemedButton(item, false);
+      if (item && item->CtlType == ODT_COMBOBOX) {
+        DrawThemedCombo(item);
+      } else if (item && item->CtlType == ODT_BUTTON) {
+        DrawThemedButton(item, false);
+      }
       return TRUE;
+    }
+    case WM_MEASUREITEM: {
+      auto* measure = reinterpret_cast<MEASUREITEMSTRUCT*>(l);
+      if (measure && measure->CtlType == ODT_COMBOBOX) {
+        measure->itemHeight = 20;
+        return TRUE;
+      }
+      return FALSE;
     }
     case WM_CTLCOLORSTATIC: {
       // Ink on parchment for the labels; the changelog's read-only body gets
@@ -166,6 +178,17 @@ LRESULT CALLBACK Proc(HWND window, UINT message, WPARAM w, LPARAM l) {
         return reinterpret_cast<LRESULT>(ThemePanelBrush());
       }
       SetBkMode(dc, TRANSPARENT);
+      // The parchment is a *pattern* brush, and GDI lines a pattern up with the
+      // origin of whatever it is painting. Handed back as-is, every label
+      // restarted the texture at its own top-left corner and showed up as a
+      // rectangle of mismatched mottling. Shifting the brush origin by the
+      // control's offset inside the dialog makes the paper continuous.
+      HWND label = reinterpret_cast<HWND>(l);
+      POINT origin = {0, 0};
+      MapWindowPoints(label, window, &origin, 1);
+      const int period = 256;   // MakeParchment's tile
+      SetBrushOrgEx(dc, ((-origin.x % period) + period) % period,
+                    ((-origin.y % period) + period) % period, nullptr);
       return reinterpret_cast<LRESULT>(ThemeBackgroundBrush());
     }
     case WM_NOTIFY: {
@@ -411,8 +434,10 @@ DialogAction ShowSettings(HWND owner, const std::wstring& game_folder,
   Child(window, L"STATIC", Text(IDS_DISPLAY_MODE), SS_LEFT | SS_CENTERIMAGE,
         IDC_DLG_MODE_LABEL, modal.font);
   HWND mode = Child(window, L"COMBOBOX", L"",
-                    CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP, IDC_DLG_MODE,
-                    modal.font);
+                    CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS |
+                        WS_VSCROLL | WS_TABSTOP,
+                    IDC_DLG_MODE, modal.font);
+  ThemeDropdown(mode);
   for (UINT label : {IDS_MODE_FULLSCREEN, IDS_MODE_BORDERLESS, IDS_MODE_WINDOWED}) {
     SendMessageW(mode, CB_ADDSTRING, 0,
                  reinterpret_cast<LPARAM>(Text(label).c_str()));
@@ -422,8 +447,10 @@ DialogAction ShowSettings(HWND owner, const std::wstring& game_folder,
   Child(window, L"STATIC", Text(IDS_SMOOTHING), SS_LEFT | SS_CENTERIMAGE,
         IDC_DLG_SHADER_LABEL, modal.font);
   HWND shader = Child(window, L"COMBOBOX", L"",
-                      CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP, IDC_DLG_SHADER,
-                      modal.font);
+                      CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS |
+                          WS_VSCROLL | WS_TABSTOP,
+                      IDC_DLG_SHADER, modal.font);
+  ThemeDropdown(shader);
   for (size_t i = 0; i < display.shaders.size(); ++i) {
     // The first entry is the empty string, which is "no filter". The rest are
     // whatever .glsl files the game folder happens to hold — listed by name

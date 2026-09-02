@@ -8,8 +8,8 @@
 
 #define IDI_APP                 1
 #define IDR_MANIFEST            1
-#define IDR_BTN                 2   // the button plaque, nine-sliced
-#define IDR_BTN_PRESSED         3   // and its pressed state
+// 2 was IDR_BTN and 3 IDR_BTN_PRESSED, the button plaque as its own two files.
+// Retired with btn.png and btn_pressed.png: the plaque is sliced off the sheet.
 // 4 was IDR_FONT, an embedded lettering face. Retired with the font.
 #define IDR_SHEET               5   // the artist's sprite sheet — see Theme.cpp
 

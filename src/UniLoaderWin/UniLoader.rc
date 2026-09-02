@@ -15,10 +15,8 @@ IDI_APP ICON "app.ico"
 // /MANIFEST:NO in CMakeLists.txt) because it refuses to merge two.
 IDR_MANIFEST RT_MANIFEST "UniLoader.manifest"
 
-// The button art, nine-sliced at draw time — see Theme.cpp. A file in an
-// art\ folder beside the exe overrides these for redrawing without a rebuild.
-IDR_BTN         RCDATA "btn.png"
-IDR_BTN_PRESSED RCDATA "btn_pressed.png"
+// Every sprite the program draws, on one sheet, sliced at load — see Theme.cpp.
+// An art\ui.png beside the exe overrides it, for redrawing without a rebuild.
 IDR_SHEET       RCDATA "ui.png"
 
 VS_VERSION_INFO VERSIONINFO

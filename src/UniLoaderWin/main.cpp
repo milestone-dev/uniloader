@@ -167,6 +167,57 @@ std::wstring ForRichEdit(const std::wstring& text) {
   return out;
 }
 
+/// Marks the URLs in the description as clickable links, in the theme's red.
+///
+/// EM_AUTOURLDETECT can find them, but it draws them the system blue and runs
+/// its scan on its own schedule — asking the control which runs were links
+/// straight after setting the text found none, because it had not looked yet.
+/// Marking them here means the range that is clickable and the range that is
+/// red are the same range by construction. `text` must be the string the
+/// control was given: RichEdit counts the CR-only breaks the way this does.
+void MarkLinks(HWND control, const std::wstring& text) {
+  CHARFORMAT2W link = {};
+  link.cbSize = sizeof(link);
+  link.dwMask = CFM_LINK | CFM_COLOR | CFM_UNDERLINE;
+  link.dwEffects = CFE_LINK | CFE_UNDERLINE;
+  link.crTextColor = ThemeLink();   // and no CFE_AUTOCOLOR, which would win
+
+  // Found first, applied second: most descriptions carry no link at all, and
+  // they should not pay the repaint the marking below costs.
+  std::vector<CHARRANGE> links;
+  size_t at = 0;
+  while (at < text.size()) {
+    size_t start = std::wstring::npos;
+    for (const wchar_t* prefix : {L"https://", L"http://", L"www."}) {
+      const size_t found = text.find(prefix, at);
+      if (found < start) start = found;
+    }
+    if (start == std::wstring::npos) break;
+    size_t end = start;
+    while (end < text.size() && !iswspace(text[end])) ++end;
+    // A URL that ends a sentence does not own the full stop.
+    while (end > start && wcschr(L".,;:!?)]}>\"'", text[end - 1])) --end;
+    if (end > start) {
+      links.push_back({static_cast<LONG>(start), static_cast<LONG>(end)});
+    }
+    at = end > start ? end : start + 1;
+  }
+  if (links.empty()) return;
+
+  SendMessageW(control, WM_SETREDRAW, FALSE, 0);
+  for (const CHARRANGE& range : links) {
+    SendMessageW(control, EM_EXSETSEL, 0, reinterpret_cast<LPARAM>(&range));
+    SendMessageW(control, EM_SETCHARFORMAT, SCF_SELECTION,
+                 reinterpret_cast<LPARAM>(&link));
+  }
+  // Back to the top: setting the ranges dragged the selection, and the view
+  // with it. Invalidated without an erase, which would flash the whole box.
+  const CHARRANGE none = {0, 0};
+  SendMessageW(control, EM_EXSETSEL, 0, reinterpret_cast<LPARAM>(&none));
+  SendMessageW(control, WM_SETREDRAW, TRUE, 0);
+  InvalidateRect(control, nullptr, FALSE);
+}
+
 /// Declared early because showing a plugin can change whether the variant
 /// dropdown exists, and that changes where everything under it sits.
 void Layout();
@@ -656,7 +707,9 @@ void ShowPluginDetails() {
       if (g.catalogue) about = Utf8(ul_base_description(g.catalogue));
       if (about.empty()) about = Text(IDS_NO_PLUGIN_ABOUT);
     }
-    SetWindowTextW(g.description, ForRichEdit(about).c_str());
+    const std::wstring shown = ForRichEdit(about);
+    SetWindowTextW(g.description, shown.c_str());
+    MarkLinks(g.description, shown);
     SendMessageW(g.variants, CB_RESETCONTENT, 0, 0);
     // Hidden, not merely disabled. "No plugin" has no variants to choose
     // between, and an empty greyed dropdown sitting under the list reads as a
@@ -687,7 +740,9 @@ void ShowPluginDetails() {
     // sentence explaining the absence is longer than the absence and reads as
     // though something went wrong.
     const std::wstring about = Utf8(ul_plugin_description(g.catalogue, index));
-    SetWindowTextW(g.description, ForRichEdit(about).c_str());
+    const std::wstring shown = ForRichEdit(about);
+    SetWindowTextW(g.description, shown.c_str());
+    MarkLinks(g.description, shown);
 
     SendMessageW(g.variants, CB_RESETCONTENT, 0, 0);
     const int variants = ul_plugin_variant_count(g.catalogue, index);
@@ -1924,9 +1979,18 @@ void Layout() {
   const RECT list_box = {margin, panel_top, margin + left_width,
                          panel_top + panel_height};
   if (!EqualRect(&list_box, &last_list) || !EqualRect(&words_box, &last_words)) {
+    // Only the ground the panels have just left or just taken, never the whole
+    // window: picking a plugin can add or drop the variants row, and erasing
+    // everything to redraw two frames repaints the parchment under the entire
+    // window — which is the jarring flash on what should be a quiet change.
+    RECT stale = list_box;
+    UnionRect(&stale, &stale, &last_list);
+    UnionRect(&stale, &stale, &words_box);
+    UnionRect(&stale, &stale, &last_words);
+    InflateRect(&stale, 4, 4);
     last_list = list_box;
     last_words = words_box;
-    InvalidateRect(g.window, nullptr, TRUE);
+    InvalidateRect(g.window, &stale, TRUE);
   }
 }
 
@@ -1951,7 +2015,7 @@ void Create() {
   g.action = Child(L"BUTTON", Text(IDS_ACTION_CHECK).c_str(),
                    BS_OWNERDRAW | WS_TABSTOP, IDC_ACTION);
   // Owner-drawn rather than the system progress control, which cannot wear
-  // the theme: the bar tiles the artist's sprite — see DrawThemedProgress.
+  // the theme — see DrawThemedProgress.
   g.progress = Child(L"STATIC", L"", SS_OWNERDRAW, IDC_PROGRESS);
   ShowWindow(g.progress, SW_HIDE);
 
@@ -1965,8 +2029,13 @@ void Create() {
                         WS_TABSTOP,
                     IDC_PLUGINS);
 
-  g.variants = Child(L"COMBOBOX", L"", CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP,
+  // Owner-drawn so the closed control can wear the button plaque; CBS_HASSTRINGS
+  // is what keeps CB_GETLBTEXT working once the drawing is ours.
+  g.variants = Child(L"COMBOBOX", L"",
+                     CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS |
+                         WS_VSCROLL | WS_TABSTOP,
                      IDC_VARIANTS);
+  ThemeDropdown(g.variants);
   RegisterSlideshow();
   g.shot = CreateSlideshow(g.window, IDC_SHOT);
   g.shot_prev = Child(L"BUTTON", L"◀", BS_OWNERDRAW | WS_TABSTOP, IDC_SHOT_PREV);
@@ -1980,7 +2049,10 @@ void Create() {
   g.description = Child(MSFTEDIT_CLASS, L"",
                         ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL,
                         IDC_DESCRIPTION);
-  SendMessageW(g.description, EM_AUTOURLDETECT, TRUE, 0);
+  // Off on purpose: MarkLinks finds the URLs itself, so that the range that is
+  // clickable is the range that is red. Left on, the detector re-marks them in
+  // the system blue on its own schedule and undoes the colouring.
+  SendMessageW(g.description, EM_AUTOURLDETECT, FALSE, 0);
   // EN_LINK arrives as WM_NOTIFY only when asked for.
   SendMessageW(g.description, EM_SETEVENTMASK, 0, ENM_LINK);
   // The author's words on the same parchment as the boxes around them.
@@ -2065,6 +2137,12 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w, LPARAM l) {
     }
     case WM_MEASUREITEM: {
       auto* measure = reinterpret_cast<MEASUREITEMSTRUCT*>(l);
+      if (measure && measure->CtlType == ODT_COMBOBOX) {
+        // An owner-drawn combo asks once and uses the answer for the closed
+        // control and every row; without it the rows collapse to nothing.
+        measure->itemHeight = 20;
+        return TRUE;
+      }
       if (measure && measure->CtlID == IDC_PLUGINS) {
         // From the font rather than a constant, so the rows are still readable
         // when the system text size is turned up.
@@ -2085,6 +2163,8 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w, LPARAM l) {
         DrawPluginRow(item);
       } else if (item && item->CtlID == IDC_PROGRESS) {
         DrawThemedProgress(item->hDC, item->rcItem, g.progress_permille);
+      } else if (item && item->CtlType == ODT_COMBOBOX) {
+        DrawThemedCombo(item);
       } else if (item && item->CtlType == ODT_BUTTON) {
         DrawThemedButton(item, item->CtlID == IDC_PLAY);
       }
