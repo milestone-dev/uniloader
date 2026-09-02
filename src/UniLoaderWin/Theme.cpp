@@ -146,9 +146,8 @@ NinePatch LoadNinePatchResource(int id) {
 }
 
 /// Draws the patch over `box`: the corner slices land 1:1, and everything
-/// between them *repeats* at its drawn size — tiled, never stretched, which
-/// is what keeps a textured middle looking like the artist's pixels at any
-/// button size. Source coordinates skip the guide border when there is one.
+/// between them scales to fit — nearest neighbour, so the pixels stay square.
+/// Source coordinates skip the guide border when there is one.
 void DrawNinePatch(HDC dc, const RECT& box, const NinePatch& patch) {
   Gdiplus::Graphics graphics(dc);
   graphics.SetInterpolationMode(Gdiplus::InterpolationModeNearestNeighbor);
@@ -172,19 +171,9 @@ void DrawNinePatch(HDC dc, const RECT& box, const NinePatch& patch) {
       const int dw = dx[column + 1] - dx[column];
       const int dh = dy[row + 1] - dy[row];
       if (sw <= 0 || sh <= 0 || dw <= 0 || dh <= 0) continue;
-      // Clip to the region and lay the source block down repeatedly at its
-      // own size. A corner's region equals its block, so it lands exactly
-      // once; edges repeat along their axis, the middle in both.
-      graphics.SetClip(Gdiplus::Rect(box.left + dx[column], box.top + dy[row], dw, dh));
-      for (int ty = box.top + dy[row]; ty < box.top + dy[row] + dh; ty += sh) {
-        for (int tx = box.left + dx[column]; tx < box.left + dx[column] + dw;
-             tx += sw) {
-          graphics.DrawImage(patch.image.get(), Gdiplus::Rect(tx, ty, sw, sh),
-                             patch.border + sx[column], patch.border + sy[row], sw,
-                             sh, Gdiplus::UnitPixel);
-        }
-      }
-      graphics.ResetClip();
+      const Gdiplus::Rect destination(box.left + dx[column], box.top + dy[row], dw, dh);
+      graphics.DrawImage(patch.image.get(), destination, patch.border + sx[column],
+                         patch.border + sy[row], sw, sh, Gdiplus::UnitPixel);
     }
   }
 }
