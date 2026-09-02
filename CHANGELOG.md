@@ -1,4 +1,4 @@
-﻿# Changelog
+# Changelog
 
 What changed in each release, in the words a user would use. This file is what
 the GitHub release notes are made of.
@@ -23,7 +23,7 @@ in a War2Combat install:
 - **Downloads and installs the mod.** Reinstalling later uses the copy kept on
   this machine instead of downloading again.
 - **Switches plugins**, one at a time, with **No plugin** as a real choice. A
-  plugin that comes in more than one version â€” a difficulty pair, usually â€”
+  plugin that comes in more than one version — a difficulty pair, usually —
   gets a second dropdown.
 - **Shows what each plugin is**: its own description, screenshots, and YouTube
   videos and playlists, playing right in the window.
