@@ -6,10 +6,12 @@
 
 #include <gdiplus.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace ulwin {
 namespace {
@@ -171,6 +173,106 @@ void DrawNinePatch(HDC dc, const RECT& box, const NinePatch& patch) {
   }
 }
 
+/// One sprite in a sheet: the bounding box of a run of connected
+/// non-transparent pixels.
+struct Island {
+  int left = 0, top = 0, right = 0, bottom = 0;   // half-open
+};
+
+/// Finds every sprite in a sheet by flood-filling regions of visible pixels.
+/// Sprites must be separated by transparent space; how they are arranged is
+/// otherwise the artist's business.
+std::vector<Island> FindIslands(Gdiplus::Bitmap* sheet) {
+  const int width = static_cast<int>(sheet->GetWidth());
+  const int height = static_cast<int>(sheet->GetHeight());
+  std::vector<Island> islands;
+
+  Gdiplus::BitmapData data = {};
+  Gdiplus::Rect all(0, 0, width, height);
+  if (sheet->LockBits(&all, Gdiplus::ImageLockModeRead, PixelFormat32bppARGB,
+                      &data) != Gdiplus::Ok) {
+    return islands;
+  }
+  const auto* pixels = static_cast<const uint8_t*>(data.Scan0);
+  auto visible = [&](int x, int y) {
+    return pixels[y * data.Stride + x * 4 + 3] > 16;   // the alpha byte
+  };
+
+  std::vector<uint8_t> seen(static_cast<size_t>(width) * height, 0);
+  std::vector<int> queue;
+  for (int start_y = 0; start_y < height; ++start_y) {
+    for (int start_x = 0; start_x < width; ++start_x) {
+      if (seen[start_y * width + start_x] || !visible(start_x, start_y)) continue;
+      Island island{start_x, start_y, start_x + 1, start_y + 1};
+      queue.clear();
+      queue.push_back(start_y * width + start_x);
+      seen[start_y * width + start_x] = 1;
+      while (!queue.empty()) {
+        const int at = queue.back();
+        queue.pop_back();
+        const int x = at % width;
+        const int y = at / width;
+        if (x < island.left) island.left = x;
+        if (y < island.top) island.top = y;
+        if (x + 1 > island.right) island.right = x + 1;
+        if (y + 1 > island.bottom) island.bottom = y + 1;
+        const int around[4][2] = {{x - 1, y}, {x + 1, y}, {x, y - 1}, {x, y + 1}};
+        for (const auto& next : around) {
+          if (next[0] < 0 || next[0] >= width || next[1] < 0 || next[1] >= height) {
+            continue;
+          }
+          const int index = next[1] * width + next[0];
+          if (seen[index] || !visible(next[0], next[1])) continue;
+          seen[index] = 1;
+          queue.push_back(index);
+        }
+      }
+      // A stray pixel is dust, not a sprite.
+      if (island.right - island.left >= 4 && island.bottom - island.top >= 4) {
+        islands.push_back(island);
+      }
+    }
+  }
+  sheet->UnlockBits(&data);
+
+  // Reading order: rows first, left to right within one. Rows are banded in
+  // two passes — sort by top, then start a new band whenever a sprite begins
+  // below everything in the current one — because "overlaps vertically" is
+  // not transitive and handing it to std::sort as an ordering is undefined.
+  std::sort(islands.begin(), islands.end(),
+            [](const Island& a, const Island& b) { return a.top < b.top; });
+  std::vector<int> band(islands.size(), 0);
+  int row = 0;
+  int row_bottom = islands.empty() ? 0 : islands[0].bottom;
+  for (size_t i = 1; i < islands.size(); ++i) {
+    if (islands[i].top >= row_bottom) {
+      ++row;
+      row_bottom = islands[i].bottom;
+    } else if (islands[i].bottom > row_bottom) {
+      row_bottom = islands[i].bottom;
+    }
+    band[i] = row;
+  }
+  std::vector<size_t> order(islands.size());
+  for (size_t i = 0; i < order.size(); ++i) order[i] = i;
+  std::sort(order.begin(), order.end(), [&](size_t a, size_t b) {
+    if (band[a] != band[b]) return band[a] < band[b];
+    return islands[a].left < islands[b].left;
+  });
+  std::vector<Island> sorted;
+  sorted.reserve(islands.size());
+  for (const size_t i : order) sorted.push_back(islands[i]);
+  return sorted;
+}
+
+std::unique_ptr<Gdiplus::Bitmap> Crop(Gdiplus::Bitmap* sheet, const Island& island) {
+  std::unique_ptr<Gdiplus::Bitmap> piece(
+      sheet->Clone(island.left, island.top, island.right - island.left,
+                   island.bottom - island.top, PixelFormat32bppARGB));
+  if (piece && piece->GetLastStatus() == Gdiplus::Ok) return piece;
+  return {};
+}
+
 /// Where the artist's files live: an `art` folder beside the exe, so a redrawn
 /// PNG is picked up on the next start with no rebuild.
 std::wstring ArtPath(const wchar_t* name) {
@@ -269,23 +371,49 @@ void CreateTheme() {
   g_theme.panel = CreateSolidBrush(kPanel);
   g_theme.button_font = MakeSerif(16, FW_BOLD);
   g_theme.play_font = MakeSerif(22, FW_BOLD);
-  // The artist's buttons: a file beside the exe wins, for redrawing without a
-  // rebuild, and the copy embedded in the exe is what ships. With neither,
-  // the painted style below stands in.
-  g_theme.button = LoadNinePatch(ArtPath(L"button.9.png"));
-  if (!g_theme.button.ok) g_theme.button = LoadNinePatchResource(IDR_BTN);
-  g_theme.button_pressed = LoadNinePatch(ArtPath(L"button-pressed.9.png"));
-  if (!g_theme.button_pressed.ok) {
-    g_theme.button_pressed = LoadNinePatchResource(IDR_BTN_PRESSED);
+  // The artist's sheet: one PNG holding every piece, sprites separated by
+  // transparent space, meaning assigned by reading order —
+  //
+  //   1. the button plaque      2. the button pressed
+  //   3. the checkbox, empty    4. the checkbox, checked
+  //
+  // — extras beyond those are ignored until something wants them. A sheet
+  // beside the exe (art\sheet.png) wins, for redrawing without a rebuild; the
+  // embedded copy is what ships.
+  std::unique_ptr<Gdiplus::Bitmap> sheet;
+  {
+    auto from_disk = std::make_unique<Gdiplus::Bitmap>(ArtPath(L"sheet.png").c_str());
+    if (from_disk->GetLastStatus() == Gdiplus::Ok && from_disk->GetWidth() > 0) {
+      sheet = std::move(from_disk);
+    }
   }
-  // Checkbox panes, once the artist draws them; the painted style stands in.
+  if (sheet) {
+    const std::vector<Island> islands = FindIslands(sheet.get());
+    if (islands.size() > 0) g_theme.button = MakePatch(Crop(sheet.get(), islands[0]));
+    if (islands.size() > 1) {
+      g_theme.button_pressed = MakePatch(Crop(sheet.get(), islands[1]));
+    }
+    if (islands.size() > 2) g_theme.check = Crop(sheet.get(), islands[2]);
+    if (islands.size() > 3) g_theme.check_on = Crop(sheet.get(), islands[3]);
+  }
+
+  // Individual files fill whatever the sheet did not: loose art beside the
+  // exe first, then the copies embedded in the exe, then the painted style.
   auto plain = [](const std::wstring& path) -> std::unique_ptr<Gdiplus::Bitmap> {
     auto image = std::make_unique<Gdiplus::Bitmap>(path.c_str());
     if (image->GetLastStatus() != Gdiplus::Ok || image->GetWidth() == 0) return {};
     return image;
   };
-  g_theme.check = plain(ArtPath(L"check.png"));
-  g_theme.check_on = plain(ArtPath(L"check-on.png"));
+  if (!g_theme.button.ok) g_theme.button = LoadNinePatch(ArtPath(L"button.9.png"));
+  if (!g_theme.button.ok) g_theme.button = LoadNinePatchResource(IDR_BTN);
+  if (!g_theme.button_pressed.ok) {
+    g_theme.button_pressed = LoadNinePatch(ArtPath(L"button-pressed.9.png"));
+  }
+  if (!g_theme.button_pressed.ok) {
+    g_theme.button_pressed = LoadNinePatchResource(IDR_BTN_PRESSED);
+  }
+  if (!g_theme.check) g_theme.check = plain(ArtPath(L"check.png"));
+  if (!g_theme.check_on) g_theme.check_on = plain(ArtPath(L"check-on.png"));
 }
 
 void DestroyTheme() {
