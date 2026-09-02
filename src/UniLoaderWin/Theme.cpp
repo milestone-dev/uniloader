@@ -232,29 +232,16 @@ HBITMAP MakeParchment(int size) {
   return bitmap;
 }
 
-/// Registers the lettering face embedded in the exe for this process only —
-/// nothing is installed on the machine. True when "Folkard" is usable.
-bool LoadFolkard() {
-  HRSRC found = FindResourceW(nullptr, MAKEINTRESOURCEW(IDR_FONT), RT_RCDATA);
-  if (!found) return false;
-  HGLOBAL handle = LoadResource(nullptr, found);
-  if (!handle) return false;
-  const DWORD size = SizeofResource(nullptr, found);
-  void* bytes = LockResource(handle);
-  if (!bytes || !size) return false;
-  DWORD installed = 0;
-  return AddFontMemResourceEx(bytes, size, nullptr, &installed) != nullptr;
-}
-
-HFONT MakeSerif(int height, int weight, bool folkard) {
-  // Folkard is the game's own style of lettering, carried in the exe. When it
-  // failed to register, Palatino Linotype is the closest stock face.
+HFONT MakeSerif(int height, int weight) {
+  // Palatino Linotype ships with every Windows this runs on and is the
+  // closest stock face to the game's lettering; the fallback keeps the shape
+  // serif if a stripped install lacks it.
   LOGFONTW definition = {};
   definition.lfHeight = -height;
-  definition.lfWeight = folkard ? FW_NORMAL : weight;
+  definition.lfWeight = weight;
   definition.lfCharSet = DEFAULT_CHARSET;
   definition.lfQuality = CLEARTYPE_QUALITY;
-  wcscpy_s(definition.lfFaceName, folkard ? L"Folkard" : L"Palatino Linotype");
+  wcscpy_s(definition.lfFaceName, L"Palatino Linotype");
   HFONT font = CreateFontIndirectW(&definition);
   if (!font) {
     wcscpy_s(definition.lfFaceName, L"Georgia");
@@ -280,9 +267,8 @@ void CreateTheme() {
   g_theme.background = g_theme.parchment ? CreatePatternBrush(g_theme.parchment)
                                          : CreateSolidBrush(kParchment);
   g_theme.panel = CreateSolidBrush(kPanel);
-  const bool folkard = LoadFolkard();
-  g_theme.button_font = MakeSerif(folkard ? 18 : 16, FW_BOLD, folkard);
-  g_theme.play_font = MakeSerif(folkard ? 28 : 22, FW_BOLD, folkard);
+  g_theme.button_font = MakeSerif(16, FW_BOLD);
+  g_theme.play_font = MakeSerif(22, FW_BOLD);
   // The artist's buttons: a file beside the exe wins, for redrawing without a
   // rebuild, and the copy embedded in the exe is what ships. With neither,
   // the painted style below stands in.

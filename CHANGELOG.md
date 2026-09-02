@@ -3,6 +3,10 @@
 What changed in each release, in the words a user would use. This file is what
 the GitHub release notes are made of.
 
+## 1.0.7
+
+- Back to plain serif lettering on the buttons.
+
 ## 1.0.6
 
 - The buttons wear hand-drawn plaques and the game's own style of lettering,

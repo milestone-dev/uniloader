@@ -10,7 +10,7 @@
 #define IDR_MANIFEST            1
 #define IDR_BTN                 2   // the button plaque, nine-sliced
 #define IDR_BTN_PRESSED         3   // and its pressed state
-#define IDR_FONT                4   // Folkard, the lettering face
+// 4 was IDR_FONT, an embedded lettering face. Retired with the font.
 
 // --------------------------------------------------------------- the window
 
