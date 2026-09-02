@@ -3,6 +3,11 @@
 What changed in each release, in the words a user would use. This file is what
 the GitHub release notes are made of.
 
+## 1.0.8
+
+- All the theme's art comes off one hand-drawn sprite sheet now — buttons,
+  checkboxes, and the download bar, which finally matches the rest.
+
 ## 1.0.7
 
 - Back to plain serif lettering on the buttons.

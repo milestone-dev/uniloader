@@ -50,6 +50,7 @@ struct Theme {
   NinePatch button_pressed;   // art/button-pressed.9.png, else button darkened
   std::unique_ptr<Gdiplus::Bitmap> check;      // art/check.png, drawn 1:1-ish
   std::unique_ptr<Gdiplus::Bitmap> check_on;   // art/check-on.png
+  std::unique_ptr<Gdiplus::Bitmap> progress;   // the bar's repeating unit
 };
 
 Theme g_theme;
@@ -106,26 +107,25 @@ NinePatch LoadNinePatch(const std::wstring& path) {
   return MakePatch(std::make_unique<Gdiplus::Bitmap>(path.c_str()));
 }
 
-/// The same, out of an RCDATA resource — how the shipped one-file exe carries
+/// A bitmap out of an RCDATA resource — how the shipped one-file exe carries
 /// the art. The pixels are copied off the stream so nothing has to outlive it.
-NinePatch LoadNinePatchResource(int id) {
-  NinePatch patch;
+std::unique_ptr<Gdiplus::Bitmap> LoadBitmapResource(int id) {
   HRSRC found = FindResourceW(nullptr, MAKEINTRESOURCEW(id), RT_RCDATA);
-  if (!found) return patch;
+  if (!found) return {};
   HGLOBAL handle = LoadResource(nullptr, found);
-  if (!handle) return patch;
+  if (!handle) return {};
   const DWORD size = SizeofResource(nullptr, found);
   const void* bytes = LockResource(handle);
-  if (!bytes || !size) return patch;
+  if (!bytes || !size) return {};
 
   HGLOBAL copy = GlobalAlloc(GMEM_MOVEABLE, size);
-  if (!copy) return patch;
+  if (!copy) return {};
   memcpy(GlobalLock(copy), bytes, size);
   GlobalUnlock(copy);
   IStream* stream = nullptr;
   if (CreateStreamOnHGlobal(copy, TRUE, &stream) != S_OK) {
     GlobalFree(copy);
-    return patch;
+    return {};
   }
   auto loaded = std::make_unique<Gdiplus::Bitmap>(stream);
   // Cloned into pixels of its own: a Bitmap made from a stream reads from it
@@ -136,7 +136,11 @@ NinePatch LoadNinePatchResource(int id) {
                               PixelFormat32bppARGB));
   }
   stream->Release();
-  return MakePatch(std::move(owned));
+  return owned;
+}
+
+NinePatch LoadNinePatchResource(int id) {
+  return MakePatch(LoadBitmapResource(id));
 }
 
 /// Draws the patch over `box`: corners as they are, edges and middle
@@ -173,97 +177,10 @@ void DrawNinePatch(HDC dc, const RECT& box, const NinePatch& patch) {
   }
 }
 
-/// One sprite in a sheet: the bounding box of a run of connected
-/// non-transparent pixels.
+/// One region of the sheet, in pixels, half-open.
 struct Island {
-  int left = 0, top = 0, right = 0, bottom = 0;   // half-open
+  int left = 0, top = 0, right = 0, bottom = 0;
 };
-
-/// Finds every sprite in a sheet by flood-filling regions of visible pixels.
-/// Sprites must be separated by transparent space; how they are arranged is
-/// otherwise the artist's business.
-std::vector<Island> FindIslands(Gdiplus::Bitmap* sheet) {
-  const int width = static_cast<int>(sheet->GetWidth());
-  const int height = static_cast<int>(sheet->GetHeight());
-  std::vector<Island> islands;
-
-  Gdiplus::BitmapData data = {};
-  Gdiplus::Rect all(0, 0, width, height);
-  if (sheet->LockBits(&all, Gdiplus::ImageLockModeRead, PixelFormat32bppARGB,
-                      &data) != Gdiplus::Ok) {
-    return islands;
-  }
-  const auto* pixels = static_cast<const uint8_t*>(data.Scan0);
-  auto visible = [&](int x, int y) {
-    return pixels[y * data.Stride + x * 4 + 3] > 16;   // the alpha byte
-  };
-
-  std::vector<uint8_t> seen(static_cast<size_t>(width) * height, 0);
-  std::vector<int> queue;
-  for (int start_y = 0; start_y < height; ++start_y) {
-    for (int start_x = 0; start_x < width; ++start_x) {
-      if (seen[start_y * width + start_x] || !visible(start_x, start_y)) continue;
-      Island island{start_x, start_y, start_x + 1, start_y + 1};
-      queue.clear();
-      queue.push_back(start_y * width + start_x);
-      seen[start_y * width + start_x] = 1;
-      while (!queue.empty()) {
-        const int at = queue.back();
-        queue.pop_back();
-        const int x = at % width;
-        const int y = at / width;
-        if (x < island.left) island.left = x;
-        if (y < island.top) island.top = y;
-        if (x + 1 > island.right) island.right = x + 1;
-        if (y + 1 > island.bottom) island.bottom = y + 1;
-        const int around[4][2] = {{x - 1, y}, {x + 1, y}, {x, y - 1}, {x, y + 1}};
-        for (const auto& next : around) {
-          if (next[0] < 0 || next[0] >= width || next[1] < 0 || next[1] >= height) {
-            continue;
-          }
-          const int index = next[1] * width + next[0];
-          if (seen[index] || !visible(next[0], next[1])) continue;
-          seen[index] = 1;
-          queue.push_back(index);
-        }
-      }
-      // A stray pixel is dust, not a sprite.
-      if (island.right - island.left >= 4 && island.bottom - island.top >= 4) {
-        islands.push_back(island);
-      }
-    }
-  }
-  sheet->UnlockBits(&data);
-
-  // Reading order: rows first, left to right within one. Rows are banded in
-  // two passes — sort by top, then start a new band whenever a sprite begins
-  // below everything in the current one — because "overlaps vertically" is
-  // not transitive and handing it to std::sort as an ordering is undefined.
-  std::sort(islands.begin(), islands.end(),
-            [](const Island& a, const Island& b) { return a.top < b.top; });
-  std::vector<int> band(islands.size(), 0);
-  int row = 0;
-  int row_bottom = islands.empty() ? 0 : islands[0].bottom;
-  for (size_t i = 1; i < islands.size(); ++i) {
-    if (islands[i].top >= row_bottom) {
-      ++row;
-      row_bottom = islands[i].bottom;
-    } else if (islands[i].bottom > row_bottom) {
-      row_bottom = islands[i].bottom;
-    }
-    band[i] = row;
-  }
-  std::vector<size_t> order(islands.size());
-  for (size_t i = 0; i < order.size(); ++i) order[i] = i;
-  std::sort(order.begin(), order.end(), [&](size_t a, size_t b) {
-    if (band[a] != band[b]) return band[a] < band[b];
-    return islands[a].left < islands[b].left;
-  });
-  std::vector<Island> sorted;
-  sorted.reserve(islands.size());
-  for (const size_t i : order) sorted.push_back(islands[i]);
-  return sorted;
-}
 
 std::unique_ptr<Gdiplus::Bitmap> Crop(Gdiplus::Bitmap* sheet, const Island& island) {
   std::unique_ptr<Gdiplus::Bitmap> piece(
@@ -371,30 +288,39 @@ void CreateTheme() {
   g_theme.panel = CreateSolidBrush(kPanel);
   g_theme.button_font = MakeSerif(16, FW_BOLD);
   g_theme.play_font = MakeSerif(22, FW_BOLD);
-  // The artist's sheet: one PNG holding every piece, sprites separated by
-  // transparent space, meaning assigned by reading order —
+  // The artist's sheet, ui.png, at fixed positions:
   //
-  //   1. the button plaque      2. the button pressed
-  //   3. the checkbox, empty    4. the checkbox, checked
+  //   (0,0)  the button plaque, 28x28    (28,0)  the same, pressed
+  //   (0,28) the checkbox, 15x15         (15,28) the same, checked
+  //   (0,43) the progress bar's repeating unit, 15 tall, width to content
   //
-  // — extras beyond those are ignored until something wants them. A sheet
-  // beside the exe (art\sheet.png) wins, for redrawing without a rebuild; the
-  // embedded copy is what ships.
+  // A sheet beside the exe (art\ui.png) wins, for redrawing without a
+  // rebuild; the embedded copy is what ships.
   std::unique_ptr<Gdiplus::Bitmap> sheet;
   {
-    auto from_disk = std::make_unique<Gdiplus::Bitmap>(ArtPath(L"sheet.png").c_str());
+    auto from_disk = std::make_unique<Gdiplus::Bitmap>(ArtPath(L"ui.png").c_str());
     if (from_disk->GetLastStatus() == Gdiplus::Ok && from_disk->GetWidth() > 0) {
       sheet = std::move(from_disk);
     }
   }
-  if (sheet) {
-    const std::vector<Island> islands = FindIslands(sheet.get());
-    if (islands.size() > 0) g_theme.button = MakePatch(Crop(sheet.get(), islands[0]));
-    if (islands.size() > 1) {
-      g_theme.button_pressed = MakePatch(Crop(sheet.get(), islands[1]));
+  if (!sheet) sheet = LoadBitmapResource(IDR_SHEET);
+  if (sheet && sheet->GetWidth() >= 56 && sheet->GetHeight() >= 58) {
+    g_theme.button = MakePatch(Crop(sheet.get(), {0, 0, 28, 28}));
+    g_theme.button_pressed = MakePatch(Crop(sheet.get(), {28, 0, 56, 28}));
+    g_theme.check = Crop(sheet.get(), {0, 28, 15, 43});
+    g_theme.check_on = Crop(sheet.get(), {15, 28, 30, 43});
+    // The progress unit: 15 tall from y=43, as wide as its pixels reach.
+    int reach = 0;
+    for (int y = 43; y < 58; ++y) {
+      for (int x = static_cast<int>(sheet->GetWidth()) - 1; x >= reach; --x) {
+        Gdiplus::Color colour;
+        if (sheet->GetPixel(x, y, &colour) == Gdiplus::Ok && colour.GetA() > 16) {
+          reach = x + 1;
+          break;
+        }
+      }
     }
-    if (islands.size() > 2) g_theme.check = Crop(sheet.get(), islands[2]);
-    if (islands.size() > 3) g_theme.check_on = Crop(sheet.get(), islands[3]);
+    if (reach > 0) g_theme.progress = Crop(sheet.get(), {0, 43, reach, 58});
   }
 
   // Individual files fill whatever the sheet did not: loose art beside the
@@ -478,13 +404,9 @@ void DrawThemedButton(const DRAWITEMSTRUCT* item, bool large) {
     DeleteObject(fill);
   }
 
-  // Focus is the game's own signal: a gold line around the lettering, not the
-  // dotted marquee Windows would draw.
-  if (focused && !disabled) {
-    HBRUSH gold = CreateSolidBrush(kGold);
-    FrameRect(dc, &box, gold);
-    DeleteObject(gold);
-  }
+  // No focus outline of the theme's own: the artist's pressed sprite carries
+  // the gold edge, and painting a second one over it doubled the signal.
+  (void)focused;
 
   wchar_t text[256] = {};
   GetWindowTextW(item->hwndItem, text, 256);
@@ -503,6 +425,43 @@ void DrawThemedButton(const DRAWITEMSTRUCT* item, bool large) {
   DrawTextW(dc, text, -1, &label,
             DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
   SelectObject(dc, previous);
+}
+
+void DrawThemedProgress(HDC dc, const RECT& box, int permille) {
+  if (permille < 0) permille = 0;
+  if (permille > 1000) permille = 1000;
+  // The trough: panel parchment in an ink frame, like every other box.
+  HBRUSH pane = CreateSolidBrush(kPanel);
+  FillRect(dc, &box, pane);
+  DeleteObject(pane);
+  HBRUSH frame = CreateSolidBrush(kFrame);
+  FrameRect(dc, &box, frame);
+  DeleteObject(frame);
+
+  const int width = (box.right - box.left) * permille / 1000;
+  if (width <= 0) return;
+  const RECT filled = {box.left, box.top, box.left + width, box.bottom};
+
+  if (g_theme.progress) {
+    // The artist's unit, tiled to the filled width and clipped at the edge of
+    // what is actually done.
+    Gdiplus::Graphics graphics(dc);
+    graphics.SetInterpolationMode(Gdiplus::InterpolationModeNearestNeighbor);
+    graphics.SetPixelOffsetMode(Gdiplus::PixelOffsetModeHalf);
+    graphics.SetClip(Gdiplus::Rect(filled.left, filled.top, width,
+                                   filled.bottom - filled.top));
+    const int height = box.bottom - box.top;
+    const int unit = static_cast<int>(g_theme.progress->GetWidth()) * height /
+                     static_cast<int>(g_theme.progress->GetHeight());
+    for (int x = box.left; x < filled.right; x += (unit > 0 ? unit : 1)) {
+      graphics.DrawImage(g_theme.progress.get(),
+                         Gdiplus::Rect(x, box.top, unit, height));
+    }
+  } else {
+    HBRUSH fill = CreateSolidBrush(kMaroon);
+    FillRect(dc, const_cast<RECT*>(&filled), fill);
+    DeleteObject(fill);
+  }
 }
 
 void DrawThemedCheckbox(HDC dc, const RECT& box, const wchar_t* label,

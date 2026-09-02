@@ -41,6 +41,10 @@ HFONT ThemePlayFont();
 /// replaces the painting when present.
 void DrawThemedButton(const DRAWITEMSTRUCT* item, bool large);
 
+/// Paints the download bar: a parchment trough, and the artist's repeating
+/// unit tiled to `permille` of the width.
+void DrawThemedProgress(HDC dc, const RECT& box, int permille);
+
 /// Paints a checkbox in the game's preferences style: a small pane with a red
 /// cross when checked, the label beside it in ink. Drawn over the whole
 /// control through NM_CUSTOMDRAW, so the control keeps its own check state.

@@ -63,6 +63,7 @@ struct App {
   HWND window = nullptr;
   HWND status = nullptr;
   HWND progress = nullptr;
+  int progress_permille = 0;   // what the owner-drawn bar shows
   HWND action = nullptr;
   HWND play = nullptr;
   HWND plugins = nullptr;
@@ -1512,7 +1513,8 @@ void Start(Job job, std::string plugin_id, int variant) {
     std::lock_guard<std::mutex> held(g.status_lock);
     g.error_text.clear();
   }
-  SendMessageW(g.progress, PBM_SETPOS, 0, 0);
+  g.progress_permille = 0;
+  InvalidateRect(g.progress, nullptr, FALSE);
   Refresh();
   switch (job) {
     case Job::Check:     g.worker = std::thread(CheckWorker); break;
@@ -1808,7 +1810,7 @@ void Layout() {
   move(g.latest, margin + status_width + 8, y, latest_width, row_height);
   move(g.action, action_left, y + 1, action_width, 26);
   y += row_height;
-  move(g.progress, margin, y, action_left - margin - 8, 10);
+  move(g.progress, margin, y, action_left - margin - 8, 15);
   y += 18;
 
   // --- the panel -----------------------------------------------------------
@@ -1948,8 +1950,9 @@ void Create() {
                    IDC_LATEST);
   g.action = Child(L"BUTTON", Text(IDS_ACTION_CHECK).c_str(),
                    BS_OWNERDRAW | WS_TABSTOP, IDC_ACTION);
-  g.progress = Child(PROGRESS_CLASSW, L"", 0, IDC_PROGRESS);
-  SendMessageW(g.progress, PBM_SETRANGE32, 0, 1000);
+  // Owner-drawn rather than the system progress control, which cannot wear
+  // the theme: the bar tiles the artist's sprite — see DrawThemedProgress.
+  g.progress = Child(L"STATIC", L"", SS_OWNERDRAW, IDC_PROGRESS);
   ShowWindow(g.progress, SW_HIDE);
 
   // Owner-drawn for the tick box; LBS_HASSTRINGS so the control still keeps the
@@ -2080,6 +2083,8 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w, LPARAM l) {
       const auto* item = reinterpret_cast<const DRAWITEMSTRUCT*>(l);
       if (item && item->CtlID == IDC_PLUGINS) {
         DrawPluginRow(item);
+      } else if (item && item->CtlID == IDC_PROGRESS) {
+        DrawThemedProgress(item->hDC, item->rcItem, g.progress_permille);
       } else if (item && item->CtlType == ODT_BUTTON) {
         DrawThemedButton(item, item->CtlID == IDC_PLAY);
       }
@@ -2088,7 +2093,8 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w, LPARAM l) {
     case WM_UL_PROGRESS: {
       const int permille = static_cast<int>(static_cast<intptr_t>(w));
       if (permille >= 0) {
-        SendMessageW(g.progress, PBM_SETPOS, static_cast<WPARAM>(permille), 0);
+        g.progress_permille = permille;
+        InvalidateRect(g.progress, nullptr, FALSE);
       }
       std::wstring text;
       {

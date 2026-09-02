@@ -22,6 +22,7 @@ IDR_MANIFEST RT_MANIFEST "UniLoader.manifest"
 // art\ folder beside the exe overrides these for redrawing without a rebuild.
 IDR_BTN         RCDATA "btn.png"
 IDR_BTN_PRESSED RCDATA "btn_pressed.png"
+IDR_SHEET       RCDATA "ui.png"
 
 VS_VERSION_INFO VERSIONINFO
   FILEVERSION    UL_APP_VERSION_MAJOR, UL_APP_VERSION_MINOR, UL_APP_VERSION_PATCH, 0
