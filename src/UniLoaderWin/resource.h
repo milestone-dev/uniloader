@@ -70,6 +70,7 @@
 #define IDC_DLG_SHADER        217   // the scaling filter
 #define IDC_DLG_SHADER_LABEL  218
 #define IDC_DLG_MODE_LABEL    219
+#define IDC_DLG_PROJECT       221   // opens this program's own page on GitHub
 // 220 was IDC_DLG_GAME_OPTIONS, which launched Warcraft II Config.exe. Retired:
 // that tool is cnc-ddraw's own, and its Display Mode, OpenGL Filter and Maintain
 // Aspect Ratio are the three settings this window already has, writing the same

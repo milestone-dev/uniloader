@@ -38,6 +38,9 @@
 // 298 was IDS_GAME_OPTIONS. Retired with the button; see resource.h.
 #define IDS_NO_DISPLAY_CONFIG    299
 
+// 290-299 is full, 298 retired, so the next block starts here.
+#define IDS_PROJECT_PAGE         300
+
 #define IDS_ACTION_INSTALL       220
 #define IDS_ACTION_UPDATE        221
 #define IDS_ACTION_CANCEL        222

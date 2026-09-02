@@ -3,6 +3,10 @@
 What changed in each release, in the words a user would use. This file is what
 the GitHub release notes are made of.
 
+## 1.0.13
+
+- Add a link to the project page on GitHub, in Settings.
+
 ## 1.0.12
 
 - Add theme.

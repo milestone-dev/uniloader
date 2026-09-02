@@ -2,6 +2,7 @@
 
 #include <commctrl.h>   // NM_CUSTOMDRAW, for the themed checkbox
 
+#include "Net.hpp"       // OpenInBrowser, for the project page
 #include "Strings.hpp"
 #include "Theme.hpp"
 #include "resource.h"
@@ -16,6 +17,10 @@ namespace ulwin {
 namespace {
 
 constexpr wchar_t kClassName[] = L"UniLoaderDialog";
+
+/// Where this program lives. Not in Strings.rc: it is where a click goes, not
+/// a sentence anyone reads, and it is the same in every language.
+constexpr wchar_t kProjectUrl[] = L"https://github.com/milestone-dev/uniloader";
 
 /// What a running modal window is doing. One per window, reached through
 /// GWLP_USERDATA, and never shared — these windows are modal, so there is only
@@ -99,6 +104,14 @@ void LayoutSettings(HWND window) {
     y += 30 + 8;
   }
 
+  // Bottom left, across from Close: it leaves the window rather than changing
+  // anything in it, so it sits with the other way out and not among the
+  // settings.
+  HWND project = GetDlgItem(window, IDC_DLG_PROJECT);
+  if (project) {
+    MoveWindow(project, margin, client.bottom - margin - 28, 260, 28, TRUE);
+  }
+
   HWND close = GetDlgItem(window, IDC_DLG_CLOSE);
   if (close) {
     MoveWindow(close, client.right - margin - 100, client.bottom - margin - 28, 100, 28,
@@ -139,6 +152,9 @@ LRESULT CALLBACK Proc(HWND window, UINT message, WPARAM w, LPARAM l) {
     case WM_COMMAND:
       switch (LOWORD(w)) {
         case IDC_DLG_CLOSE:          Finish(window, DialogAction::None); return 0;
+        // Opened here rather than handed back as an action: it changes nothing
+        // the caller has to act on, and the window stays where it is.
+        case IDC_DLG_PROJECT:        OpenInBrowser(kProjectUrl); return 0;
         case IDC_DLG_CHANGE_FOLDER:  Finish(window, DialogAction::ChangeFolder); return 0;
         case IDC_DLG_UNINSTALL:      Finish(window, DialogAction::Uninstall); return 0;
         case IDC_DLG_CLEAR_CACHE:    Finish(window, DialogAction::ClearCache); return 0;
@@ -494,6 +510,8 @@ DialogAction ShowSettings(HWND owner, const std::wstring& game_folder,
     EnableWindow(clear, busy ? FALSE : TRUE);
   }
 
+  Child(window, L"BUTTON", Text(IDS_PROJECT_PAGE), BS_OWNERDRAW | WS_TABSTOP,
+        IDC_DLG_PROJECT, modal.font);
   Child(window, L"BUTTON", Text(IDS_CLOSE), BS_OWNERDRAW | WS_TABSTOP,
         IDC_DLG_CLOSE, modal.font);
 
