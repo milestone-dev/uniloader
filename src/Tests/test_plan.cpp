@@ -118,6 +118,21 @@ TEST(plan, install_leaves_the_plugin_catalogue_in_the_store) {
   ul_plan_free(plan);
 }
 
+TEST(plan, what_stays_in_store_is_one_answer) {
+  // Shared by the install plan and the host's post-install pruning. When these
+  // were two lists they drifted, and the pruning deleted a folder the install
+  // had never copied — which no uninstall could ever bring back.
+  CHECK_EQ(ul_path_stays_in_store("Plugins/2_Insane/insane.w2p"), 1);
+  CHECK_EQ(ul_path_stays_in_store("Plugins"), 1);
+  CHECK_EQ(ul_path_stays_in_store("base/info.txt"), 1);
+  CHECK_EQ(ul_path_stays_in_store("base"), 1);
+  CHECK_EQ(ul_path_stays_in_store("SCREENSHOTS & CREDITS, MAIN"), 1);
+  CHECK_EQ(ul_path_stays_in_store("SCREENSHOTS & CREDITS, MAIN/1.png"), 1);
+  CHECK_EQ(ul_path_stays_in_store("UniFiles/uni.dat"), 0);
+  CHECK_EQ(ul_path_stays_in_store("Unification.exe"), 0);
+  CHECK_EQ(ul_path_stays_in_store(""), 0);
+}
+
 TEST(plan, install_refuses_a_path_that_escapes) {
   const std::string package = NulList({"../../Windows/System32/evil.dll", "ok.txt"});
   ul_plan* plan = ul_plan_install(kStore, kGame, package.c_str(), "\0", kBackup);

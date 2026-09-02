@@ -359,6 +359,13 @@ void ul_catalogue_add_path(ul_catalogue* c, const char* relative_path);
 void ul_catalogue_add_info(ul_catalogue* c, const char* plugin_id,
                            const char* text, size_t length);
 
+/// Whether a package-relative path belongs to the store rather than the game:
+/// Plugins/, base/, and the press-kit folder. The install plan skips these,
+/// and the host's post-install pruning must skip exactly the same set — a
+/// folder the install left in the store and the pruning then deleted was
+/// simply destroyed, because no receipt ever knew it.
+int ul_path_stays_in_store(const char* relative_path);
+
 /// Sorts and closes the catalogue. Ordering is the numeric prefix the folders
 /// carry ("0_basegame", "1_DAIFE", "2_Insane"), which is the author's own
 /// intended order, falling back to name order for a folder without one.

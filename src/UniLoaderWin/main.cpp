@@ -262,7 +262,17 @@ std::wstring TrimTrailing(std::wstring path) {
 }
 
 std::wstring PackageFolderFor(const std::string& version) {
-  return g.store + L"\\package\\" + FromUtf8(version.empty() ? "current" : version);
+  // Named by the bare number. The mod page says "v6.6" and the package file
+  // says "6_6", and the cache has to be found under one name whichever of
+  // them the version came from — a lookup under "v6.6" of a folder written as
+  // "6.6" is a miss that costs an 800 MB re-download and looks exactly like a
+  // working program.
+  std::string bare = version;
+  if (bare.size() > 1 && (bare[0] == 'v' || bare[0] == 'V') && bare[1] >= '0' &&
+      bare[1] <= '9') {
+    bare.erase(0, 1);
+  }
+  return g.store + L"\\package\\" + FromUtf8(bare.empty() ? "current" : bare);
 }
 
 /// Where a video's thumbnail is cached once it has been fetched. The id names
@@ -347,9 +357,10 @@ void WriteStamp(const std::wstring& unpacked, const std::string& version,
 /// Everything in the store copy that the game folder now holds as well.
 ///
 /// The package is 1.2 GB and the install just wrote all of it into War2Combat.
-/// Keeping a second copy in the store would double that for nothing, so only
-/// Plugins/ stays: the catalogue is read from it, and the game folder never
-/// holds more than one plugin at a time. Uninstalling moves the rest back.
+/// Keeping a second copy in the store would double that for nothing, so what
+/// stays is exactly what the install plan left behind — Plugins/, base/, the
+/// press-kit — asked of the core, because a second list here once drifted and
+/// pruned a folder the install had never copied, destroying it.
 void PruneInstalledFiles(const std::wstring& unpacked, const std::string& root) {
   const std::wstring package =
       root.empty() ? unpacked : TrimTrailing(unpacked + L"\\" + FromUtf8(root));
@@ -361,7 +372,7 @@ void PruneInstalledFiles(const std::wstring& unpacked, const std::string& root) 
   do {
     const std::wstring name = found.cFileName;
     if (name == L"." || name == L"..") continue;
-    if (_wcsicmp(name.c_str(), L"Plugins") == 0) continue;   // the part that stays
+    if (ul_path_stays_in_store(ToUtf8(name).c_str())) continue;
     const std::wstring path = package + L"\\" + name;
     if ((found.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
       folders.push_back(path);
@@ -1007,6 +1018,9 @@ std::wstring ListOneDriveFolder(const std::wstring& share_url, std::wstring& pro
 /// pointer, is the host's.
 bool DownloadPackage(std::wstring& archive_path) {
   std::wstring last_problem;
+  // Said before the first request, not after: the first hop can be a slow
+  // server and thirty seconds of a frozen status line reads as a hang.
+  SetStatus(Text(IDS_LISTING));
 
   // The count is re-read every time round, not captured: following a pointer
   // *adds* sources, and the whole reason a pointer is followed is to reach the

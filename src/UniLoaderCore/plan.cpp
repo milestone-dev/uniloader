@@ -231,6 +231,23 @@ char* ul_package_stamp_root(const char* json, size_t length) {
   return ul::Duplicate(document.Str("root"));
 }
 
+int ul_path_stays_in_store(const char* relative_path) {
+  if (!relative_path) return 0;
+  const std::string relative = ul::NormaliseSlashes(relative_path);
+  const std::string top = ul::Segment(relative, 0);
+  // Plugins/ is the catalogue: it is kept whole and exactly one plugin's
+  // files are copied into the game at a time, which is what makes switching a
+  // copy and a delete rather than a reinstall. base/ is the mod describing
+  // itself — gallery material for the launcher, not files the game loads.
+  // The press-kit folder is screenshots and credit sheets for people, nothing
+  // the game reads. None of the three is ever installed, and none of the
+  // three may ever be pruned from the store as though it had been.
+  return (ul::EqualsNoCase(top, "Plugins") || ul::EqualsNoCase(top, "base") ||
+          ul::EqualsNoCase(top, "SCREENSHOTS & CREDITS, MAIN"))
+             ? 1
+             : 0;
+}
+
 ul_plan* ul_plan_install(const char* package_dir, const char* game_dir,
                          const char* package_paths, const char* existing,
                          const char* backup_dir) {
@@ -250,20 +267,11 @@ ul_plan* ul_plan_install(const char* package_dir, const char* game_dir,
     // Refused rather than sanitised, and refused here as well as in the
     // extractor: a plan is also built from paths a caller supplies.
     if (!ul::IsSafeRelativePath(relative)) continue;
-    // Plugins stay in the store. The whole catalogue is kept there and exactly
-    // one plugin's files are copied into the game at a time, which is what
-    // makes switching a copy and a delete rather than a reinstall.
-    if (ul::EqualsNoCase(ul::Segment(relative, 0), "Plugins")) continue;
-    // So does base/: it is the mod describing itself — screenshots and an
-    // info.txt for the launcher's gallery — not files the game loads, and an
-    // uninstall should never have to take a read-me back out of a game folder.
-    if (ul::EqualsNoCase(ul::Segment(relative, 0), "base")) continue;
-    // And the press-kit folder v6.6 ships at its root: screenshots and credit
-    // sheets for people, nothing the game reads. It stays in the store like
-    // the folders above rather than adding five megabytes to the game folder.
-    if (ul::EqualsNoCase(ul::Segment(relative, 0), "SCREENSHOTS & CREDITS, MAIN")) {
-      continue;
-    }
+    // What stays in the store is one shared answer — see
+    // ul_path_stays_in_store — because two lists would drift, and the day
+    // they did, the pruning after an install deleted from the store a folder
+    // the install had never copied out of it. Nothing brought it back.
+    if (ul_path_stays_in_store(relative.c_str())) continue;
     // And the stamp is UniLoader's own bookkeeping about the store, not part
     // of the package. Copied in, it turns up as a stray file in the game
     // folder that the mod knows nothing about.

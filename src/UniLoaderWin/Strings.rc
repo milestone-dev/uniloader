@@ -34,7 +34,7 @@ BEGIN
   IDS_SMOOTHING           "Smoothing"
   IDS_SMOOTHING_NONE      "None — sharp pixels"
   IDS_NO_DISPLAY_CONFIG   "War2Combat's display settings were not found in this folder."
-  IDS_LISTING             "Finding the package on OneDrive…"
+  IDS_LISTING             "Finding the package…"
 
   IDS_ACTION_INSTALL      "Install Unification Mod"
   IDS_ACTION_UPDATE       "Update"
