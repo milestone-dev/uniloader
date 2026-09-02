@@ -3,6 +3,10 @@
 What changed in each release, in the words a user would use. This file is what
 the GitHub release notes are made of.
 
+## 1.0.5
+
+- The boxes around the plugin list and the description match the theme too.
+
 ## 1.0.4
 
 - A new look, after the game's own menu: parchment, deep red buttons, gold

@@ -1817,6 +1817,7 @@ void Layout() {
   // are read while choosing from the list directly above them, and the eye
   // should not have to cross the picture to get from one to the other.
   RECT player_box = {};
+  RECT words_box = {};
   const int panel_top = y;
   const int panel_bottom = height - margin - kActionHeight - 12;
   const int panel_height = panel_bottom - panel_top;
@@ -1875,6 +1876,7 @@ void Layout() {
     // the picture they are about.
     const int words_top = shot_top + shot_height + 38;
     move(g.description, right, words_top, shot_width, panel_bottom - words_top);
+    words_box = RECT{right, words_top, right + shot_width, panel_bottom};
     // The player sits exactly where the picture does, and follows it on resize.
     // Taken from the numbers rather than from ShotRect(), because the panel has
     // not been moved yet — it is in the batch, and the batch lands at the end.
@@ -1910,6 +1912,20 @@ void Layout() {
   // After the batch: the player is a separate window that WebView2 owns, and it
   // has to land on the rectangle the panel actually ended up at.
   if (g.has_shots) MoveVideoPlayer(player_box);
+
+  // The window paints ink frames around the panels, so when a panel moves the
+  // old frame is stale parchment: repaint, but only when something did move —
+  // Layout also runs on every status change, and a wholesale repaint per
+  // download tick would flicker.
+  static RECT last_list = {};
+  static RECT last_words = {};
+  const RECT list_box = {margin, panel_top, margin + left_width,
+                         panel_top + panel_height};
+  if (!EqualRect(&list_box, &last_list) || !EqualRect(&words_box, &last_words)) {
+    last_list = list_box;
+    last_words = words_box;
+    InvalidateRect(g.window, nullptr, TRUE);
+  }
 }
 
 void Create() {
@@ -1939,9 +1955,11 @@ void Create() {
   // Owner-drawn for the tick box; LBS_HASSTRINGS so the control still keeps the
   // text and the drawing code can ask it for a row rather than shadowing the
   // list in a second array that could disagree with it.
+  // No WS_BORDER: the system's border colour is nobody's parchment, so the
+  // window paints its own ink frame around the panel — see WM_PAINT.
   g.plugins = Child(L"LISTBOX", L"",
                     LBS_NOTIFY | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | WS_VSCROLL |
-                        WS_BORDER | WS_TABSTOP,
+                        WS_TABSTOP,
                     IDC_PLUGINS);
 
   g.variants = Child(L"COMBOBOX", L"", CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP,
@@ -1957,8 +1975,7 @@ void Create() {
   // window of an unregistered class fails silently.
   LoadLibraryW(L"Msftedit.dll");
   g.description = Child(MSFTEDIT_CLASS, L"",
-                        ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL |
-                            WS_BORDER,
+                        ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL,
                         IDC_DESCRIPTION);
   SendMessageW(g.description, EM_AUTOURLDETECT, TRUE, 0);
   // EN_LINK arrives as WM_NOTIFY only when asked for.
@@ -2001,6 +2018,24 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w, LPARAM l) {
         return 0;
       }
       return DefWindowProcW(window, message, w, l);
+    }
+    case WM_PAINT: {
+      PAINTSTRUCT paint;
+      HDC dc = BeginPaint(window, &paint);
+      // The ink frames around the parchment panels, drawn by the window since
+      // the controls lost their system borders.
+      HBRUSH ink = CreateSolidBrush(ThemeInk());
+      for (HWND child : {g.plugins, g.description}) {
+        if (!child || !IsWindowVisible(child)) continue;
+        RECT box;
+        GetWindowRect(child, &box);
+        MapWindowPoints(nullptr, window, reinterpret_cast<POINT*>(&box), 2);
+        InflateRect(&box, 1, 1);
+        FrameRect(dc, &box, ink);
+      }
+      DeleteObject(ink);
+      EndPaint(window, &paint);
+      return 0;
     }
     case WM_CTLCOLORSTATIC: {
       // Ink on parchment for every label; the version, being secondary to the
