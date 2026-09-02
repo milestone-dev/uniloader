@@ -49,6 +49,7 @@ add_executable(UniLoaderWin WIN32
   Net.cpp
   Slideshow.cpp
   Strings.cpp
+  Theme.cpp
   Video.cpp
   UniLoader.rc)
 

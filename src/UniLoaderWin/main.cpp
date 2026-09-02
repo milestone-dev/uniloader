@@ -31,6 +31,7 @@
 #include "GameData.hpp"
 #include "Net.hpp"
 #include "Slideshow.hpp"
+#include "Theme.hpp"
 #include "Video.hpp"
 #include "Strings.hpp"
 #include "resource.h"
@@ -196,7 +197,7 @@ constexpr int kRowIndent = 12;     // where every name starts
 // The bottom-right block: Play, a gap, then the difficulty. Named because the
 // panel above has to stop short of all three, and the slot for the dropdown is
 // reserved whether or not there is one to show.
-constexpr int kPlayHeight = 36;
+constexpr int kPlayHeight = 46;   // the primary action, a size up from the rest
 constexpr int kPlayWidth = 260;    // fixed: the label carries a name of any length
 constexpr int kVariantHeight = 26;
 constexpr int kActionGap = 10;
@@ -217,18 +218,18 @@ void DrawPluginRow(const DRAWITEMSTRUCT* item) {
   const bool selected = (item->itemState & ODS_SELECTED) != 0;
   const bool active = row == ActiveRow();
 
-  HBRUSH brush = CreateSolidBrush(GetSysColor(selected ? COLOR_HIGHLIGHT : COLOR_WINDOW));
+  // The game's own pairing: parchment rows, and the chosen one in the deep
+  // maroon its buttons wear, lettered in gold.
+  HBRUSH brush =
+      selected ? CreateSolidBrush(ThemeMaroon()) : CreateSolidBrush(ThemePanel());
   FillRect(dc, &item->rcItem, brush);
   DeleteObject(brush);
 
   if (active) {
     RECT accent = item->rcItem;
     accent.right = accent.left + kAccentWidth;
-    // The highlight colour, which is the one the machine already uses to mean
-    // "this one" — and on a selected row it is drawn in the highlight *text*
-    // colour instead, or the bar would vanish into the selection behind it.
-    HBRUSH bar = CreateSolidBrush(
-        GetSysColor(selected ? COLOR_HIGHLIGHTTEXT : COLOR_HIGHLIGHT));
+    // Gold means "this one is loaded" — and it reads over both row colours.
+    HBRUSH bar = CreateSolidBrush(ThemeGold());
     FillRect(dc, &accent, bar);
     DeleteObject(bar);
   }
@@ -243,11 +244,10 @@ void DrawPluginRow(const DRAWITEMSTRUCT* item) {
   RECT label = item->rcItem;
   label.left += kRowIndent;
   label.right -= 8;
-  SetTextColor(dc, GetSysColor(selected ? COLOR_HIGHLIGHTTEXT : COLOR_WINDOWTEXT));
+  SetTextColor(dc, selected ? ThemeGold() : ThemeInk());
   DrawTextW(dc, text, -1, &label,
             DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
   SelectObject(dc, previous);
-  if (item->itemState & ODS_FOCUS) DrawFocusRect(dc, &item->rcItem);
 }
 
 void Say(const std::wstring& message, UINT flags = MB_OK | MB_ICONINFORMATION) {
@@ -791,8 +791,10 @@ void UpdatePlayButton() {
       // dragged the dropdown under it out to match, so the primary action moved
       // every time the selection did.
       if (*name) {
-        const int room = kPlayWidth - 32 - TextWidth(Format(IDS_PLAY_NAMED, L""), g.font);
-        label = Format(IDS_PLAY_NAMED, Ellipsised(name, room, g.font).c_str());
+        // Measured in Play's own large serif, which is what draws the label.
+        const int room =
+            kPlayWidth - 40 - TextWidth(Format(IDS_PLAY_NAMED, L""), ThemePlayFont());
+        label = Format(IDS_PLAY_NAMED, Ellipsised(name, room, ThemePlayFont()).c_str());
       }
     }
   }
@@ -1790,7 +1792,9 @@ void Layout() {
   int y = margin;
   wchar_t verb[64] = {};
   GetWindowTextW(g.action, verb, 64);
-  int action_width = TextWidth(verb, g.font) + 40;
+  // Measured in the font the themed button actually letters in, or a serif
+  // wider than the system face ends in an ellipsis nobody wrote.
+  int action_width = TextWidth(verb, ThemeButtonFont()) + 40;
   if (action_width < 130) action_width = 130;
   const int action_left = width - margin - action_width;
   wchar_t state[512] = {};
@@ -1915,18 +1919,19 @@ void Create() {
   g.font = CreateFontIndirectW(&metrics.lfMessageFont);
   metrics.lfMessageFont.lfWeight = FW_SEMIBOLD;
   g.bold_font = CreateFontIndirectW(&metrics.lfMessageFont);
+  // Owner-drawn, all of them: the menu style is painted in DrawThemedButton.
   g.changelog = Child(L"BUTTON", Text(IDS_CHANGELOG).c_str(),
-                      BS_PUSHBUTTON | WS_TABSTOP, IDC_CHANGELOG);
+                      BS_OWNERDRAW | WS_TABSTOP, IDC_CHANGELOG);
   g.settings = Child(L"BUTTON", Text(IDS_SETTINGS).c_str(),
-                     BS_PUSHBUTTON | WS_TABSTOP, IDC_SETTINGS);
+                     BS_OWNERDRAW | WS_TABSTOP, IDC_SETTINGS);
   g.modpage = Child(L"BUTTON", Text(IDS_MOD_PAGE).c_str(),
-                    BS_PUSHBUTTON | WS_TABSTOP, IDC_MOD_LINK);
+                    BS_OWNERDRAW | WS_TABSTOP, IDC_MOD_LINK);
   g.status = Child(L"STATIC", L"", SS_LEFT | SS_ENDELLIPSIS | SS_CENTERIMAGE,
                    IDC_STATUS);
   g.latest = Child(L"STATIC", L"", SS_LEFT | SS_ENDELLIPSIS | SS_CENTERIMAGE,
                    IDC_LATEST);
   g.action = Child(L"BUTTON", Text(IDS_ACTION_CHECK).c_str(),
-                   BS_DEFPUSHBUTTON | WS_TABSTOP, IDC_ACTION);
+                   BS_OWNERDRAW | WS_TABSTOP, IDC_ACTION);
   g.progress = Child(PROGRESS_CLASSW, L"", 0, IDC_PROGRESS);
   SendMessageW(g.progress, PBM_SETRANGE32, 0, 1000);
   ShowWindow(g.progress, SW_HIDE);
@@ -1943,8 +1948,8 @@ void Create() {
                      IDC_VARIANTS);
   RegisterSlideshow();
   g.shot = CreateSlideshow(g.window, IDC_SHOT);
-  g.shot_prev = Child(L"BUTTON", L"◀", BS_PUSHBUTTON | WS_TABSTOP, IDC_SHOT_PREV);
-  g.shot_next = Child(L"BUTTON", L"▶", BS_PUSHBUTTON | WS_TABSTOP, IDC_SHOT_NEXT);
+  g.shot_prev = Child(L"BUTTON", L"◀", BS_OWNERDRAW | WS_TABSTOP, IDC_SHOT_PREV);
+  g.shot_next = Child(L"BUTTON", L"▶", BS_OWNERDRAW | WS_TABSTOP, IDC_SHOT_NEXT);
 
   // A RichEdit rather than an EDIT, for exactly one feature: EM_AUTOURLDETECT,
   // which is what makes the links an author wrote into an info.txt clickable.
@@ -1958,11 +1963,10 @@ void Create() {
   SendMessageW(g.description, EM_AUTOURLDETECT, TRUE, 0);
   // EN_LINK arrives as WM_NOTIFY only when asked for.
   SendMessageW(g.description, EM_SETEVENTMASK, 0, ENM_LINK);
-  // The read-only EDIT this replaces painted itself the button-face grey;
-  // RichEdit defaults to window-white and is told to match.
+  // The author's words on the same parchment as the boxes around them.
   SendMessageW(g.description, EM_SETBKGNDCOLOR, 0,
-               static_cast<LPARAM>(GetSysColor(COLOR_BTNFACE)));
-  g.play = Child(L"BUTTON", Text(IDS_PLAY).c_str(), BS_PUSHBUTTON | WS_TABSTOP, IDC_PLAY);
+               static_cast<LPARAM>(ThemePanel()));
+  g.play = Child(L"BUTTON", Text(IDS_PLAY).c_str(), BS_OWNERDRAW | WS_TABSTOP, IDC_PLAY);
 
   // Started now so the engine is up by the time anyone clicks a video: the
   // first run of WebView2 on a machine takes a moment, and doing it here costs
@@ -1998,15 +2002,21 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w, LPARAM l) {
       }
       return DefWindowProcW(window, message, w, l);
     }
-    case WM_CTLCOLORSTATIC:
-      // The version is secondary to the sentence it ends, so it goes grey.
-      if (reinterpret_cast<HWND>(l) == g.latest) {
-        HDC dc = reinterpret_cast<HDC>(w);
-        SetTextColor(dc, GetSysColor(COLOR_GRAYTEXT));
-        SetBkColor(dc, GetSysColor(COLOR_BTNFACE));
-        return reinterpret_cast<LRESULT>(GetSysColorBrush(COLOR_BTNFACE));
-      }
-      return DefWindowProcW(window, message, w, l);
+    case WM_CTLCOLORSTATIC: {
+      // Ink on parchment for every label; the version, being secondary to the
+      // sentence it ends, gets the fainter ink.
+      HDC dc = reinterpret_cast<HDC>(w);
+      SetTextColor(dc, reinterpret_cast<HWND>(l) == g.latest ? ThemeInkFaint()
+                                                             : ThemeInk());
+      SetBkMode(dc, TRANSPARENT);
+      return reinterpret_cast<LRESULT>(ThemeBackgroundBrush());
+    }
+    case WM_CTLCOLORLISTBOX: {
+      HDC dc = reinterpret_cast<HDC>(w);
+      SetTextColor(dc, ThemeInk());
+      SetBkColor(dc, ThemePanel());
+      return reinterpret_cast<LRESULT>(ThemePanelBrush());
+    }
     case WM_GETMINMAXINFO: {
       auto* bounds = reinterpret_cast<MINMAXINFO*>(l);
       // Below this the screenshot stops being worth showing and the list stops
@@ -2033,7 +2043,11 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w, LPARAM l) {
     }
     case WM_DRAWITEM: {
       const auto* item = reinterpret_cast<const DRAWITEMSTRUCT*>(l);
-      if (item && item->CtlID == IDC_PLUGINS) DrawPluginRow(item);
+      if (item && item->CtlID == IDC_PLUGINS) {
+        DrawPluginRow(item);
+      } else if (item && item->CtlType == ODT_BUTTON) {
+        DrawThemedButton(item, item->CtlID == IDC_PLAY);
+      }
       return TRUE;
     }
     case WM_UL_PROGRESS: {
@@ -2192,6 +2206,9 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, LPWSTR command_line, int show
                                                           ICC_STANDARD_CLASSES};
   InitCommonControlsEx(&controls);
 
+  // Before the class is registered: the class background brush is the theme's.
+  CreateTheme();
+
   WNDCLASSEXW definition = {};
   definition.cbSize = sizeof(definition);
   definition.lpfnWndProc = WindowProc;
@@ -2200,7 +2217,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, LPWSTR command_line, int show
   definition.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
   definition.hIconSm = definition.hIcon;
   definition.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-  definition.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
+  definition.hbrBackground = ThemeBackgroundBrush();
   // Repaint the whole client area when the window changes size. Without it the
   // background left behind by a control that moved keeps whatever was drawn
   // there, and a drag-resize smears the old layout across the new one.
@@ -2264,6 +2281,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, LPWSTR command_line, int show
   if (g.catalogue) ul_catalogue_free(g.catalogue);
   if (g.font) DeleteObject(g.font);
   if (g.bold_font) DeleteObject(g.bold_font);
+  DestroyTheme();
   Gdiplus::GdiplusShutdown(gdiplus_token);
   CoUninitialize();
   return 0;
