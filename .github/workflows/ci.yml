@@ -31,6 +31,17 @@ jobs:
       - name: Test
         run: ctest --test-dir build -C Release -j4 --output-on-failure
 
+      # The 32-bit client, for the older machines War2Combat itself targets.
+      # Its tests run too: pointer-size bugs live exactly here.
+      - name: Configure x86
+        run: cmake -S src -B build32 -A Win32
+
+      - name: Build x86
+        run: cmake --build build32 --config Release -- -m
+
+      - name: Test x86
+        run: ctest --test-dir build32 -C Release -j4 --output-on-failure
+
       # The version the binary already carries, rather than a second one kept
       # here: version.h feeds the title bar, About, --version and the
       # VERSIONINFO block Explorer reads, and a release tagged anything else
@@ -56,19 +67,23 @@ jobs:
             "v$version is already released - bump version.h to cut another"
           }
 
-      # GitHub replaces spaces in release asset names with dots, so the asset
-      # carries the one spelling that survives: no spaces at all.
-      - name: Name the release exe
+      # GitHub replaces spaces in release asset names with dots, so the assets
+      # carry the one spelling that survives: no spaces at all.
+      - name: Name the release exes
         shell: pwsh
-        run: >-
-          Copy-Item 'build/UniLoaderWin/Release/Unification Mod Loader.exe'
-          build/UniLoaderWin/Release/UnificationModLoader.exe
+        run: |
+          Copy-Item 'build/UniLoaderWin/Release/Unification Mod Loader.exe' `
+            build/UniLoaderWin/Release/UnificationModLoader.exe
+          Copy-Item 'build32/UniLoaderWin/Release/Unification Mod Loader.exe' `
+            build/UniLoaderWin/Release/UnificationModLoader-x86.exe
 
       - name: Upload the build
         uses: actions/upload-artifact@v4
         with:
           name: UnificationModLoader-${{ steps.version.outputs.version }}
-          path: build/UniLoaderWin/Release/UnificationModLoader.exe
+          path: |
+            build/UniLoaderWin/Release/UnificationModLoader.exe
+            build/UniLoaderWin/Release/UnificationModLoader-x86.exe
 
       # Only from master, and only once per version. version.h asks for a patch
       # bump on every commit, so a commit that bumps it ships and one that does
@@ -104,4 +119,5 @@ jobs:
           git push origin "v$v"
           gh release create "v$v" `
             build/UniLoaderWin/Release/UnificationModLoader.exe `
+            build/UniLoaderWin/Release/UnificationModLoader-x86.exe `
             --title "Unification Mod Loader $v" --notes-file "$env:RUNNER_TEMP\notes.md"

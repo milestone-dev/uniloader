@@ -73,10 +73,19 @@ target_link_libraries(UniLoaderWin PRIVATE
 # opens a browser as it did before. Nothing here is required to start the
 # program, which is why the loader must be linked and not the runtime.
 if(MSVC)
+  # The loader is vendored per architecture: x64 from the original vendoring,
+  # x86 from SDK 1.0.4191.47. The loader's job is only to find the installed
+  # Evergreen runtime, so mixed SDK versions here are fine — the headers the
+  # client compiles against are the vendored ones either way.
+  if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(UL_WEBVIEW2_ARCH x64)
+  else()
+    set(UL_WEBVIEW2_ARCH x86)
+  endif()
   target_include_directories(UniLoaderWin PRIVATE
                              "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/webview2/include")
   target_link_libraries(UniLoaderWin PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/webview2/x64/WebView2LoaderStatic.lib"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/webview2/${UL_WEBVIEW2_ARCH}/WebView2LoaderStatic.lib"
     version)   # what the static loader uses to find the installed runtime
 else()
   # MinGW cannot build against the SDK's headers, which are MSVC COM. The

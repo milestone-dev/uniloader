@@ -3,6 +3,11 @@
 What changed in each release, in the words a user would use. This file is what
 the GitHub release notes are made of.
 
+## 1.0.3
+
+- Also available as a 32-bit build, `UnificationModLoader-x86.exe`, for older
+  machines.
+
 ## 1.0.2
 
 First release. Unification Mod Loader manages dannyldd's War2 Unification mod
