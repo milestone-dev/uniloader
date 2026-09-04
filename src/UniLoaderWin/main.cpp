@@ -117,6 +117,12 @@ struct App {
   /// down the list ends on the row the user stopped at rather than on whichever
   /// row happened to win a race.
   bool catch_up = false;
+  /// Whether the window is *showing* that it is busy — the bar out, the button
+  /// offering Cancel, the list greyed. Set a moment after `busy` rather than
+  /// with it: switching plugins is a job too, and it is usually over in less
+  /// time than it takes to read, so announcing it only makes the window jump.
+  /// UI thread only, unlike `busy`, which a worker reads.
+  bool busy_shown = false;
 
   /// Set when Play had to load a plugin first. The launch waits for the copy to
   /// finish, because starting the game while its files are being replaced is
@@ -222,6 +228,27 @@ void MarkLinks(HWND control, const std::wstring& text) {
   InvalidateRect(control, nullptr, FALSE);
 }
 
+/// How long a job may run before the window says so, and the timer that counts
+/// it. Long enough that a plugin switch is over first, short enough that a
+/// download looks like it started when it was asked to.
+constexpr UINT_PTR kBusyTimer = 1;
+constexpr UINT kBusyDelayMs = 250;
+
+/// Sets a control's text, and answers whether it had to. Every one of these
+/// setters repaints the control, and the status line and the action button are
+/// written on every download tick with the sentence they already say — the
+/// repaint buys nothing and is most of what flickers while a job runs.
+bool SetTextIfChanged(HWND control, const std::wstring& text) {
+  if (!control) return false;
+  const int length = GetWindowTextLengthW(control);
+  std::wstring current(static_cast<size_t>(length) + 1, L'\0');
+  GetWindowTextW(control, &current[0], length + 1);
+  current.resize(static_cast<size_t>(length));
+  if (current == text) return false;
+  SetWindowTextW(control, text.c_str());
+  return true;
+}
+
 /// Declared early because showing a plugin can change whether the variant
 /// dropdown exists, and that changes where everything under it sits.
 void Layout();
@@ -267,9 +294,38 @@ int ActiveRow() {
   return index < 0 ? 0 : index + 1;
 }
 
+/// One of the two header labels: the parchment it stands on and its sentence,
+/// laid down together on one buffer. The version reads as a second voice after
+/// the sentence it ends, so it takes the fainter ink.
+void DrawHeaderLabel(const DRAWITEMSTRUCT* item) {
+  if (!item) return;
+  const Buffered buffer(item->hDC, item->rcItem);
+  HDC dc = buffer.dc();
+
+  // The label's own corner is somewhere out in the window, and the parchment
+  // has to carry on across it rather than start again here.
+  POINT offset = {0, 0};
+  MapWindowPoints(item->hwndItem, g.window, &offset, 1);
+  const int period = 256;   // MakeParchment's tile
+  SetBrushOrgEx(dc, ((-offset.x % period) + period) % period,
+                ((-offset.y % period) + period) % period, nullptr);
+  FillRect(dc, &item->rcItem, ThemeBackgroundBrush());
+
+  wchar_t text[512] = {};
+  GetWindowTextW(item->hwndItem, text, 512);
+  SetBkMode(dc, TRANSPARENT);
+  SetTextColor(dc, item->CtlID == IDC_LATEST ? ThemeInkFaint() : ThemeInk());
+  HGDIOBJ previous = SelectObject(dc, g.font);
+  RECT box = item->rcItem;
+  DrawTextW(dc, text, -1, &box,
+            DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+  SelectObject(dc, previous);
+}
+
 void DrawPluginRow(const DRAWITEMSTRUCT* item) {
   if (!item || item->itemID == static_cast<UINT>(-1)) return;
-  HDC dc = item->hDC;
+  const Buffered buffer(item->hDC, item->rcItem);
+  HDC dc = buffer.dc();
   const int row = static_cast<int>(item->itemID);
   const bool selected = (item->itemState & ODS_SELECTED) != 0;
   const bool active = row == ActiveRow();
@@ -712,8 +768,10 @@ void ShowPluginDetails() {
       if (about.empty()) about = Text(IDS_NO_PLUGIN_ABOUT);
     }
     const std::wstring shown = ForRichEdit(about);
-    SetWindowTextW(g.description, shown.c_str());
-    MarkLinks(g.description, shown);
+    // Only when the words actually changed: setting the text repaints the box
+    // and marking the links repaints it again, and this runs on every refresh
+    // whether or not the plugin under the cursor moved.
+    if (SetTextIfChanged(g.description, shown)) MarkLinks(g.description, shown);
     SendMessageW(g.variants, CB_RESETCONTENT, 0, 0);
     // Hidden, not merely disabled. "No plugin" has no variants to choose
     // between, and an empty greyed dropdown sitting under the list reads as a
@@ -745,8 +803,7 @@ void ShowPluginDetails() {
     // though something went wrong.
     const std::wstring about = Utf8(ul_plugin_description(g.catalogue, index));
     const std::wstring shown = ForRichEdit(about);
-    SetWindowTextW(g.description, shown.c_str());
-    MarkLinks(g.description, shown);
+    if (SetTextIfChanged(g.description, shown)) MarkLinks(g.description, shown);
 
     SendMessageW(g.variants, CB_RESETCONTENT, 0, 0);
     const int variants = ul_plugin_variant_count(g.catalogue, index);
@@ -858,7 +915,7 @@ void UpdatePlayButton() {
       }
     }
   }
-  SetWindowTextW(g.play, label.c_str());
+  SetTextIfChanged(g.play, label);
 }
 
 void FillPluginList() {
@@ -887,13 +944,13 @@ void FillPluginList() {
 /// The version on offer at the end of the status sentence, so "Update" and
 /// "Install Unification Mod" say which version they are talking about.
 void UpdateLatestVersion() {
-  SetWindowTextW(g.latest, FromUtf8(g.latest_version).c_str());
+  SetTextIfChanged(g.latest, FromUtf8(g.latest_version));
 }
 
 void UpdateActionButton() {
   UINT label = IDS_ACTION_CHECK;
   bool enabled = true;
-  if (g.busy) {
+  if (g.busy_shown) {
     label = IDS_ACTION_CANCEL;
     // Except an uninstall, which is not cancellable: it is a few seconds of
     // putting files back, and stopping it halfway would leave the game folder
@@ -907,7 +964,7 @@ void UpdateActionButton() {
       label = IDS_ACTION_UPDATE;
     }
   }
-  SetWindowTextW(g.action, Text(label).c_str());
+  SetTextIfChanged(g.action, Text(label));
   EnableWindow(g.action, enabled ? TRUE : FALSE);
   // The button is sized to its words, and the words just changed.
   Layout();
@@ -918,7 +975,9 @@ void UpdateActionButton() {
 /// place for it. UI thread only — the worker goes through SetStatus, which
 /// posts here.
 void ShowStatus(const std::wstring& text) {
-  SetWindowTextW(g.status, text.c_str());
+  // The same sentence again is not news. Everything below repaints the header,
+  // and a download says "Downloading…" on every tick.
+  if (!SetTextIfChanged(g.status, text)) return;
   Layout();
   // A shorter sentence leaves the tail of the old one on screen: the labels
   // shrank and moved, and nothing else repaints the strip they vacated. The
@@ -927,11 +986,11 @@ void ShowStatus(const std::wstring& text) {
   GetClientRect(g.window, &client);
   RECT strip = {0, 0, client.right, 12 + 28};
   InvalidateRect(g.window, &strip, TRUE);
-  // And the labels themselves, erased in full. A STATIC with SS_CENTERIMAGE
-  // does not erase its own background on a text change, so a new sentence can
-  // land on the old one's leftovers whenever the box happens not to move.
-  InvalidateRect(g.status, nullptr, TRUE);
-  InvalidateRect(g.latest, nullptr, TRUE);
+  // And the labels themselves — but without an erase. They are owner-drawn now
+  // and lay their own parchment down under the words on the same buffer, so
+  // asking for the background to be wiped first only puts the flicker back.
+  InvalidateRect(g.status, nullptr, FALSE);
+  InvalidateRect(g.latest, nullptr, FALSE);
 }
 
 void UpdateStatusLine() {
@@ -966,12 +1025,14 @@ void Refresh() {
   EnableWindow(g.changelog, g.release && ul_release_note_count(g.release) > 0);
   // Nothing to play until the mod is there. Play launches the package's own
   // Unification.exe, which does not exist before an install.
-  EnableWindow(g.play, installed && !g.game_folder.empty() && !g.busy);
-  EnableWindow(g.plugins, installed && !g.busy);
+  // The greying, like the bar, waits for busy_shown: a job short enough to go
+  // unannounced should not grey the list and un-grey it a frame later either.
+  EnableWindow(g.play, installed && !g.game_folder.empty() && !g.busy_shown);
+  EnableWindow(g.plugins, installed && !g.busy_shown);
   // Which row is ticked is read at paint time, so a job that changed it has to
   // ask for a repaint rather than assume one.
   InvalidateRect(g.plugins, nullptr, FALSE);
-  ShowWindow(g.progress, g.busy ? SW_SHOW : SW_HIDE);
+  ShowWindow(g.progress, g.busy_shown ? SW_SHOW : SW_HIDE);
   ShowPluginDetails();
 }
 
@@ -1574,6 +1635,11 @@ void Start(Job job, std::string plugin_id, int variant) {
   }
   g.progress_permille = 0;
   InvalidateRect(g.progress, nullptr, FALSE);
+  // Nothing is shown yet. A job that finishes inside the delay never announces
+  // itself at all, which is what a plugin switch wants; a download outlives it
+  // and the timer brings the bar and the Cancel button out.
+  g.busy_shown = false;
+  SetTimer(g.window, kBusyTimer, kBusyDelayMs, nullptr);
   Refresh();
   switch (job) {
     case Job::Check:     g.worker = std::thread(CheckWorker); break;
@@ -1588,6 +1654,9 @@ void Start(Job job, std::string plugin_id, int variant) {
 
 void OnAction() {
   if (g.busy) {
+    // A job the window has not owned up to yet is not one anybody can have
+    // meant to cancel: the button still reads "Check for updates".
+    if (!g.busy_shown) return;
     // The button is disabled during an uninstall, but a keyboard can still
     // reach a default button; the guard has to live here too.
     if (g.job == Job::Uninstall) return;
@@ -1753,7 +1822,12 @@ void OnSettings() {
 
 void OnFinished(int code, Job job) {
   if (g.worker.joinable()) g.worker.join();
+  // Killed before the flags change: a job that beat the delay never showed
+  // anything, and letting the timer fire afterwards would put the bar up over
+  // a window with nothing left to report.
+  KillTimer(g.window, kBusyTimer);
   g.busy = false;
+  g.busy_shown = false;
   g.job = Job::None;
 
   std::wstring error;
@@ -1829,6 +1903,18 @@ void Layout() {
   HDWP batch = BeginDeferWindowPos(20);
   auto move = [&](HWND child, int x, int cy, int cx, int height_of) {
     if (!child) return;
+    // A control already where it belongs is left alone. DeferWindowPos
+    // repaints whatever it is handed, identical rectangle or not, and Layout
+    // runs on every status change and every download tick — fifteen controls
+    // redrawing several times a second is most of what the flicker was.
+    RECT now = {};
+    if (GetWindowRect(child, &now)) {
+      MapWindowPoints(nullptr, g.window, reinterpret_cast<POINT*>(&now), 2);
+      if (now.left == x && now.top == cy && now.right - now.left == cx &&
+          now.bottom - now.top == height_of) {
+        return;
+      }
+    }
     if (batch) {
       batch = DeferWindowPos(batch, child, nullptr, x, cy, cx, height_of,
                              SWP_NOZORDER | SWP_NOACTIVATE);
@@ -2014,9 +2100,16 @@ void Create() {
                      owner_button | WS_TABSTOP, IDC_SETTINGS);
   g.modpage = Child(L"BUTTON", Text(IDS_MOD_PAGE).c_str(),
                     owner_button | WS_TABSTOP, IDC_MOD_LINK);
-  g.status = Child(L"STATIC", L"", SS_LEFT | SS_ENDELLIPSIS | SS_CENTERIMAGE,
+  // Owner-drawn, unlike the other labels: these two are rewritten several times
+  // a second while a download runs, and a plain STATIC erases its background
+  // and then draws its text — two passes, and the gap between them is the
+  // flicker. Drawn here they go down once, off-screen, like everything else.
+  // SS_LEFT is zero, so the unthemed form is exactly what it was.
+  g.status = Child(L"STATIC", L"",
+                   ThemedStyle(SS_OWNERDRAW) | SS_ENDELLIPSIS | SS_CENTERIMAGE,
                    IDC_STATUS);
-  g.latest = Child(L"STATIC", L"", SS_LEFT | SS_ENDELLIPSIS | SS_CENTERIMAGE,
+  g.latest = Child(L"STATIC", L"",
+                   ThemedStyle(SS_OWNERDRAW) | SS_ENDELLIPSIS | SS_CENTERIMAGE,
                    IDC_LATEST);
   g.action = Child(L"BUTTON", Text(IDS_ACTION_CHECK).c_str(),
                    owner_button | WS_TABSTOP, IDC_ACTION);
@@ -2110,26 +2203,59 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w, LPARAM l) {
       }
       return DefWindowProcW(window, message, w, l);
     }
+    case WM_TIMER:
+      // The job has outlasted the delay, so it is worth saying so.
+      if (w == kBusyTimer) {
+        KillTimer(window, kBusyTimer);
+        if (g.busy && !g.busy_shown) {
+          g.busy_shown = true;
+          Refresh();
+        }
+        return 0;
+      }
+      return DefWindowProcW(window, message, w, l);
+    case WM_ERASEBKGND:
+      // Refused: the parchment is laid down in WM_PAINT instead, on the same
+      // buffer as the frames. Erasing here would put the background on screen
+      // first and the frames a moment later, which is the flicker.
+      if (!ThemeEnabled()) return DefWindowProcW(window, message, w, l);
+      return 1;
     case WM_PAINT: {
       PAINTSTRUCT paint;
-      HDC dc = BeginPaint(window, &paint);
+      HDC target = BeginPaint(window, &paint);
       // The ink frames around the parchment panels, drawn by the window since
       // the controls lost their system borders. Without the theme they keep
-      // their own borders and there is nothing for the window to draw.
+      // their own borders and the class brush has already done the erasing.
       if (!ThemeEnabled()) {
         EndPaint(window, &paint);
         return 0;
       }
-      HBRUSH ink = CreateSolidBrush(ThemeInk());
-      for (HWND child : {g.plugins, g.description}) {
-        if (!child || !IsWindowVisible(child)) continue;
-        RECT box;
-        GetWindowRect(child, &box);
-        MapWindowPoints(nullptr, window, reinterpret_cast<POINT*>(&box), 2);
-        InflateRect(&box, 1, 1);
-        FrameRect(dc, &box, ink);
+      {
+        // Scoped so the buffer lands before EndPaint takes the DC back. Only
+        // the damaged rectangle: a resize repaints the whole client, and
+        // buffering the lot of it every time is the cost this is avoiding.
+        const Buffered buffer(target, paint.rcPaint);
+        HDC dc = buffer.dc();
+
+        // The pattern has to keep its place against the window rather than
+        // against whatever corner of it is being repainted, or the parchment
+        // shifts under a partial repaint.
+        const int period = 256;   // MakeParchment's tile
+        SetBrushOrgEx(dc, ((-paint.rcPaint.left % period) + period) % period,
+                      ((-paint.rcPaint.top % period) + period) % period, nullptr);
+        FillRect(dc, &paint.rcPaint, ThemeBackgroundBrush());
+
+        HBRUSH ink = CreateSolidBrush(ThemeInk());
+        for (HWND child : {g.plugins, g.description}) {
+          if (!child || !IsWindowVisible(child)) continue;
+          RECT box;
+          GetWindowRect(child, &box);
+          MapWindowPoints(nullptr, window, reinterpret_cast<POINT*>(&box), 2);
+          InflateRect(&box, 1, 1);
+          FrameRect(dc, &box, ink);
+        }
+        DeleteObject(ink);
       }
-      DeleteObject(ink);
       EndPaint(window, &paint);
       return 0;
     }
@@ -2185,6 +2311,8 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w, LPARAM l) {
       const auto* item = reinterpret_cast<const DRAWITEMSTRUCT*>(l);
       if (item && item->CtlID == IDC_PLUGINS) {
         DrawPluginRow(item);
+      } else if (item && (item->CtlID == IDC_STATUS || item->CtlID == IDC_LATEST)) {
+        DrawHeaderLabel(item);
       } else if (item && item->CtlID == IDC_PROGRESS) {
         DrawThemedProgress(item->hDC, item->rcItem, g.progress_permille);
       } else if (item && item->CtlType == ODT_COMBOBOX) {

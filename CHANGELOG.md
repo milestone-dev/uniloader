@@ -3,6 +3,10 @@
 What changed in each release, in the words a user would use. This file is what
 the GitHub release notes are made of.
 
+## 1.0.15
+
+- Much less flickering.
+
 ## 1.0.14
 
 - Add a "Use Warcraft theme" switch in Settings, on by default. Turn it off for

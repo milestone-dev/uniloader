@@ -57,6 +57,36 @@ HFONT ThemePlayFont();
 /// replaces the painting when present.
 void DrawThemedButton(const DRAWITEMSTRUCT* item, bool large);
 
+/// A scratch surface the size of `box`, copied over the real device context in
+/// one go when it falls out of scope.
+///
+/// Everything here paints in pieces — a nine-patch is nine or more separate
+/// draws, a row is a fill and then its text — and every piece that lands on
+/// the screen on its own is a frame the eye can catch. Drawing into a bitmap
+/// and blitting once is the difference between a control appearing and a
+/// control assembling itself.
+///
+/// Coordinates do not change: the scratch DC is offset so the same absolute
+/// rectangle the caller was given still lands in the right place.
+class Buffered {
+ public:
+  Buffered(HDC target, const RECT& box);
+  ~Buffered();
+  Buffered(const Buffered&) = delete;
+  Buffered& operator=(const Buffered&) = delete;
+
+  /// The surface to paint on — the real one if a scratch could not be had, so
+  /// a failure here costs the flicker back and nothing else.
+  HDC dc() const { return scratch ? scratch : target; }
+
+ private:
+  HDC target = nullptr;
+  RECT box{};
+  HDC scratch = nullptr;
+  HBITMAP bitmap = nullptr;
+  HGDIOBJ previous = nullptr;
+};
+
 /// Paints the button plaque into `box` for controls that are not buttons —
 /// the same nine-patch, so a dropdown sits in the same set as the buttons.
 void DrawThemedPlaque(HDC dc, const RECT& box, bool pressed);

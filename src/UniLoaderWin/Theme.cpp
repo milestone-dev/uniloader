@@ -456,6 +456,34 @@ void DestroyTheme() {
   g_theme = Theme{};
 }
 
+Buffered::Buffered(HDC target_dc, const RECT& area) : target(target_dc), box(area) {
+  const int width = box.right - box.left;
+  const int height = box.bottom - box.top;
+  if (!target || width <= 0 || height <= 0) return;
+  scratch = CreateCompatibleDC(target);
+  if (!scratch) return;
+  bitmap = CreateCompatibleBitmap(target, width, height);
+  if (!bitmap) {
+    DeleteDC(scratch);
+    scratch = nullptr;
+    return;
+  }
+  previous = SelectObject(scratch, bitmap);
+  // The whole point of not making the callers do arithmetic: the scratch is
+  // shifted so that drawing at `box`'s own coordinates lands on it correctly.
+  SetViewportOrgEx(scratch, -box.left, -box.top, nullptr);
+}
+
+Buffered::~Buffered() {
+  if (!scratch) return;
+  SetViewportOrgEx(scratch, 0, 0, nullptr);
+  BitBlt(target, box.left, box.top, box.right - box.left, box.bottom - box.top,
+         scratch, 0, 0, SRCCOPY);
+  SelectObject(scratch, previous);
+  DeleteObject(bitmap);
+  DeleteDC(scratch);
+}
+
 bool ThemeEnabled() { return g_themed; }
 void SetThemeEnabled(bool on) { g_themed = on; }
 DWORD ThemedStyle(DWORD bits) { return g_themed ? bits : 0u; }
@@ -479,7 +507,8 @@ HFONT ThemePlayFont() { return g_theme.play_font; }
 
 void DrawThemedButton(const DRAWITEMSTRUCT* item, bool large) {
   if (!item) return;
-  HDC dc = item->hDC;
+  const Buffered buffer(item->hDC, item->rcItem);
+  HDC dc = buffer.dc();
   RECT box = item->rcItem;
   const bool pressed = (item->itemState & ODS_SELECTED) != 0;
   const bool disabled = (item->itemState & ODS_DISABLED) != 0;
@@ -562,7 +591,8 @@ void DrawThemedPlaque(HDC dc, const RECT& box, bool pressed) {
 
 void DrawThemedCombo(const DRAWITEMSTRUCT* item) {
   if (!item) return;
-  HDC dc = item->hDC;
+  const Buffered buffer(item->hDC, item->rcItem);
+  HDC dc = buffer.dc();
   RECT box = item->rcItem;
   const bool selected = (item->itemState & ODS_SELECTED) != 0;
   // ODS_COMBOBOXEDIT means the closed control itself; anything else is a row
@@ -632,34 +662,40 @@ LRESULT CALLBACK ComboProc(HWND window, UINT message, WPARAM w, LPARAM l,
       return 1;   // every pixel is painted below; erasing first only flickers
     case WM_PAINT: {
       PAINTSTRUCT paint = {};
-      HDC dc = BeginPaint(window, &paint);
-      if (!dc) return 0;
+      HDC target = BeginPaint(window, &paint);
+      if (!target) return 0;
       RECT client = {};
       GetClientRect(window, &client);
-      DrawThemedPlaque(dc, client, false);
+      {
+        // Its own scope: the buffer copies itself over on the way out, and
+        // that has to happen while the paint DC is still the caller's to draw
+        // on — after EndPaint it is not.
+        const Buffered buffer(target, client);
+        HDC dc = buffer.dc();
+        DrawThemedPlaque(dc, client, false);
 
-      COMBOBOXINFO info = {};
-      info.cbSize = sizeof(info);
-      RECT button = {};
-      if (GetComboBoxInfo(window, &info)) button = info.rcButton;
+        COMBOBOXINFO info = {};
+        info.cbSize = sizeof(info);
+        RECT button = {};
+        if (GetComboBoxInfo(window, &info)) button = info.rcButton;
 
-      wchar_t text[256] = {};
-      const LRESULT chosen = SendMessageW(window, CB_GETCURSEL, 0, 0);
-      if (chosen != CB_ERR) {
-        SendMessageW(window, CB_GETLBTEXT, static_cast<WPARAM>(chosen),
-                     reinterpret_cast<LPARAM>(text));
+        wchar_t text[256] = {};
+        const LRESULT chosen = SendMessageW(window, CB_GETCURSEL, 0, 0);
+        if (chosen != CB_ERR) {
+          SendMessageW(window, CB_GETLBTEXT, static_cast<WPARAM>(chosen),
+                       reinterpret_cast<LPARAM>(text));
+        }
+        SetBkMode(dc, TRANSPARENT);
+        SetTextColor(dc, kGold);
+        HGDIOBJ previous = SelectObject(dc, g_theme.button_font);
+        RECT label = client;
+        label.left += 8;
+        label.right = (button.left > label.left ? button.left : client.right) - 4;
+        DrawTextW(dc, text, -1, &label,
+                  DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+        SelectObject(dc, previous);
+        if (button.right > button.left) DrawChevron(dc, button);
       }
-      SetBkMode(dc, TRANSPARENT);
-      SetTextColor(dc, kGold);
-      HGDIOBJ previous = SelectObject(dc, g_theme.button_font);
-      RECT label = client;
-      label.left += 8;
-      label.right = (button.left > label.left ? button.left : client.right) - 4;
-      DrawTextW(dc, text, -1, &label,
-                DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-      SelectObject(dc, previous);
-      if (button.right > button.left) DrawChevron(dc, button);
-
       EndPaint(window, &paint);
       return 0;
     }
@@ -678,9 +714,13 @@ void ThemeDropdown(HWND combo) {
   if (combo) SetWindowSubclass(combo, ComboProc, 1, 0);
 }
 
-void DrawThemedProgress(HDC dc, const RECT& box, int permille) {
+void DrawThemedProgress(HDC target, const RECT& box, int permille) {
   if (permille < 0) permille = 0;
   if (permille > 1000) permille = 1000;
+  // Buffered because this one repaints on every download tick, which is the
+  // one place in the program where a flicker would be continuous.
+  const Buffered buffer(target, box);
+  HDC dc = buffer.dc();
   // The trough is a dark well, not parchment: filled with the panel colour it
   // was within a shade of the page behind it, and an empty bar read as nothing
   // being there at all.

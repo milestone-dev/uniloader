@@ -200,6 +200,30 @@ LRESULT CALLBACK Proc(HWND window, UINT message, WPARAM w, LPARAM l) {
       }
       return FALSE;
     }
+    case WM_ERASEBKGND:
+      // Refused: the parchment goes down in WM_PAINT, buffered, so it does not
+      // appear a moment before the text that sits on it.
+      if (!ThemeEnabled()) return DefWindowProcW(window, message, w, l);
+      return 1;
+    case WM_PAINT: {
+      if (!ThemeEnabled()) return DefWindowProcW(window, message, w, l);
+      PAINTSTRUCT paint;
+      HDC target = BeginPaint(window, &paint);
+      {
+        // Scoped: the buffer copies itself over on the way out, and that has to
+        // happen before EndPaint takes the DC back.
+        const Buffered buffer(target, paint.rcPaint);
+        HDC dc = buffer.dc();
+        // Held against the window, not against the damaged corner, or the
+        // parchment shifts under a partial repaint.
+        const int period = 256;   // MakeParchment's tile
+        SetBrushOrgEx(dc, ((-paint.rcPaint.left % period) + period) % period,
+                      ((-paint.rcPaint.top % period) + period) % period, nullptr);
+        FillRect(dc, &paint.rcPaint, ThemeBackgroundBrush());
+      }
+      EndPaint(window, &paint);
+      return 0;
+    }
     case WM_CTLCOLORSTATIC: {
       // Ink on parchment for the labels; the changelog's read-only body gets
       // the panel colour, the way the main window's description does.
